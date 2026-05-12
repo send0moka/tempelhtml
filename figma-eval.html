@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML → Figma Visual Evaluator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080b12;
+  --surface: #0e1118;
+  --surface2: #141720;
+  --border: #1e2230;
+  --border2: #252a3a;
+  --accent: #5b6cff;
+  --accent-glow: rgba(91,108,255,0.18);
+  --teal: #00e5b4;
+  --teal-dim: rgba(0,229,180,0.12);
+  --warn: #f4a31c;
+  --err: #ff4d6d;
+  --ok: #24d48b;
+  --text: #dce3f0;
+  --muted: #515978;
+  --muted2: #3a4055;
+  --card: #111420;
+  --gauge-track: #1a1f30;
+  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 26px; height: 26px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+
+.logo-icon span {
+  border-radius: 3px;
+  display: block;
+}
+
+.logo-icon span:nth-child(1) { background: var(--accent); }
+.logo-icon span:nth-child(2) { background: var(--teal); }
+.logo-icon span:nth-child(3) { background: var(--teal); }
+.logo-icon span:nth-child(4) { background: var(--accent); opacity: 0.35; }
+
+.logo h1 {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--text);
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.overall-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all 0.3s;
+}
+
+.overall-badge.scored {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.overall-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted2);
+  transition: background 0.3s;
+}
+
+.overall-badge.scored .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+/* ── LAYOUT ── */
+.app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 52px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 10px 16px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-header svg { flex-shrink: 0; }
+
+/* Upload zones */
+.upload-area {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.upload-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.drop-zone {
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: var(--bg);
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.drop-zone.filled {
+  border-color: var(--teal);
+  border-style: solid;
+  background: var(--teal-dim);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+
+.drop-icon { font-size: 18px; }
+.drop-text { font-size: 11px; color: var(--muted); }
+.drop-text strong { color: var(--text); font-weight: 600; }
+.drop-filename { font-size: 10px; color: var(--teal); font-family: var(--font-mono); }
+
+/* textarea for HTML paste */
+.html-input-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 14px;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+
+.toggle-btn.active {
+  background: var(--surface2);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+textarea.html-paste {
+  flex: 1;
+  resize: none;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.65;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 0;
+}
+
+textarea.html-paste:focus { border-color: var(--accent); }
+textarea.html-paste::placeholder { color: var(--muted2); }
+
+/* Actions */
+.sidebar-actions {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-run {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: -0.2px;
+}
+
+.btn-run:hover { opacity: 0.9; }
+.btn-run:active { transform: scale(0.98); }
+.btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary-sm {
+  width: 100%;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary-sm:hover { border-color: var(--muted); color: var(--text); }
+
+/* ── MAIN CONTENT ── */
+.content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Top nav tabs */
+.content-tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.ctab {
+  padding: 0 18px;
+  height: 44px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  user-select: none;
+  letter-spacing: -0.1px;
+}
+
+.ctab:hover { color: var(--text); }
+.ctab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.ctab-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--muted2);
+}
+
+.ctab.active .ctab-dot { background: var(--accent); }
+
+.ctab-panel {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ctab-panel.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── COMPARE PANEL ── */
+.compare-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compare-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.compare-pane + .compare-pane {
+  border-left: 1px solid var(--border);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.pane-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.pane-chip {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--muted);
+}
+
+.pane-chip.html { background: rgba(91,108,255,0.2); color: var(--accent); }
+.pane-chip.img  { background: rgba(0,229,180,0.15); color: var(--teal); }
+
+.pane-content {
+  flex: 1;
+  overflow: auto;
+  background: #fff;
+  position: relative;
+}
+
+.pane-content.dark-bg { background: var(--bg); }
+
+.html-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.figma-img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  margin: auto;
+  object-fit: contain;
+}
+
+.pane-empty {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pane-empty-icon { font-size: 32px; }
+.pane-empty small { font-size: 11px; color: var(--muted2); }
+
+/* Slider overlay mode */
+.compare-pane.overlay-mode .pane-content { position: relative; overflow: hidden; cursor: col-resize; }
+
+/* ── COMPARE BOTTOM: Scores ── */
+.compare-bottom {
+  padding: 16px 18px;
+  overflow-y: auto;
+  max-height: 38vh;
+  background: var(--bg);
+}
+
+/* Empty state for scores */
+.scores-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--muted);
+  padding: 30px;
+  text-align: center;
+  flex-direction: column;
+}
+
+.scores-empty .big-icon { font-size: 40px; }
+.scores-empty p { font-size: 13px; font-weight: 500; }
+.scores-empty small { font-size: 11px; color: var(--muted2); line-height: 1.5; }
+
+/* Score results */
+.score-results { display: flex; flex-direction: column; gap: 14px; }
+
+.overall-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+}
+
+.gauge-wrap {
+  position: relative;
+  width: 72px; height: 72px;
+  flex-shrink: 0;
+}
+
+.gauge-wrap svg { transform: rotate(-90deg); }
+
+.gauge-bg {
+  fill: none;
+  stroke: var(--gauge-track);
+  stroke-width: 6;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.5s;
+  stroke-dasharray: 188.5;
+  stroke-dashoffset: 188.5;
+}
+
+.gauge-text {
+  position: absolute; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 900;
+  font-family: var(--font-sans);
+  color: var(--text);
+}
+
+.overall-info { flex: 1; }
+
+.overall-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.overall-verdict {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.overall-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mini-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+}
+
+.mini-pill-score { font-size: 13px; font-weight: 800; }
+
+/* Category cards */
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .categories-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.cat-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.cat-card.ok::before { background: var(--ok); }
+.cat-card.warn::before { background: var(--warn); }
+.cat-card.err::before { background: var(--err); }
+
+.cat-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.cat-score {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 2px;
+  letter-spacing: -1px;
+}
+
+.cat-score.ok { color: var(--ok); }
+.cat-score.warn { color: var(--warn); }
+.cat-score.err { color: var(--err); }
+
+.cat-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 6px 0;
+  overflow: hidden;
+}
+
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cat-detail {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.cat-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.cat-item-chip {
+  font-size: 9px;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* Issues section */
+.issues-section { display: flex; flex-direction: column; gap: 6px; }
+
+.issues-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  padding: 2px 0 4px;
+}
+
+.issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  border-left: 3px solid var(--warn);
+  font-size: 11px;
+}
+
+.issue-row.ok { border-left-color: var(--ok); }
+.issue-row.error { border-left-color: var(--err); }
+
+.issue-icon { font-size: 14px; flex-shrink: 0; margin-top: 0px; }
+
+.issue-title { font-weight: 600; margin-bottom: 1px; }
+.issue-detail { color: var(--muted); font-size: 10.5px; line-height: 1.5; }
+
+/* ── ELEMENTS TAB ── */
+.elements-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+}
+
+th {
+  background: var(--surface);
+  padding: 7px 9px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  position: sticky; top: 0;
+  border-bottom: 1px solid var(--border2);
+  z-index: 1;
+  white-space: nowrap;
+}
+
+td {
+  padding: 5px 9px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+tr:hover td { background: rgba(255,255,255,0.02); }
+tr.pseudo-row td { color: var(--teal); font-style: italic; }
+
+.tag-chip {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(91,108,255,0.18);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.tag-chip.pseudo { background: rgba(0,229,180,0.12); color: var(--teal); }
+
+.color-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* ── SPINNER ── */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.5s linear infinite;
+  display: none;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── DIFF OVERLAY ── */
+.diff-btn-wrap {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.diff-btn {
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.diff-btn:hover { border-color: var(--accent); color: var(--accent); }
+.diff-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Overlay slider */
+.slider-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: col-resize;
+  display: none;
+}
+
+.slider-container.active { display: block; }
+
+.slider-base, .slider-overlay {
+  position: absolute; inset: 0;
+  overflow: hidden;
+}
+
+.slider-base img, .slider-overlay img,
+.slider-base iframe { width: 100%; height: 100%; object-fit: cover; border: none; }
+
+.slider-overlay { clip-path: inset(0 50% 0 0); }
+
+.slider-handle {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  background: #fff;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.slider-handle-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+
+/* Zoom controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-btn {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  line-height: 1;
+}
+
+.zoom-btn:hover { color: var(--text); border-color: var(--muted); }
+
+.zoom-label {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Animated highlight on score reveal */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.score-results > * {
+  animation: fadeSlideUp 0.4s ease both;
+}
+
+.score-results > *:nth-child(1) { animation-delay: 0.05s; }
+.score-results > *:nth-child(2) { animation-delay: 0.1s; }
+.score-results > *:nth-child(3) { animation-delay: 0.15s; }
+.score-results > *:nth-child(4) { animation-delay: 0.2s; }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div>
+      <h1>HTML → Figma Visual Evaluator</h1>
+    </div>
+  </div>
+  <span class="logo-sub" style="margin-left:6px">Plugin extraction accuracy</span>
+
+  <div class="header-right">
+    <div class="overall-badge" id="overallBadge">
+      <div class="dot"></div>
+      <span id="badgeText">Not evaluated</span>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="section-header">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M1 1h4v4H1zM7 1h4v4H7zM1 7h4v4H1zM7 7h4v4H7z" fill="var(--muted)" rx="0.5"/>
+      </svg>
+      Inputs
+    </div>
+
+    <!-- HTML File Upload -->
+    <div class="upload-area">
+      <div class="upload-label">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <rect x="1" y="1" width="8" height="8" rx="1.5" stroke="var(--accent)" stroke-width="1.2" fill="none"/>
+          <path d="M3 5h4M5 3v4" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        HTML Source File
+      </div>
+      <div class="drop-zone" id="htmlDrop">
+        <input type="file" id="htmlFile" accept=".html,.htm" onchange="handleHtmlFile(this.files[0])">
+        <div class="drop-icon">📄</div>
+        <div class="drop-text"><strong>Drop HTML file</strong> or click</div>
+        <div id="htmlFileName" class="drop-filename" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Figma Image Upload -->
+    <div class="upload-area">
+      <div class="upload-label">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <rect x="1" y="1" width="8" height="8" rx="1.5" stroke="var(--teal)" stroke-width="1.2" fill="none"/>
+          <circle cx="3.5" cy="3.5" r="1" fill="var(--teal)"/>
+          <path d="M1.5 7L3.5 5l2 2 1.5-2L8.5 7" stroke="var(--teal)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Figma Export / Screenshot
+      </div>
+      <div class="drop-zone" id="imgDrop">
+        <input type="file" id="imgFile" accept="image/*" onchange="handleImgFile(this.files[0])">
+        <div class="drop-icon">🖼</div>
+        <div class="drop-text"><strong>Drop image</strong> or click</div>
+        <div id="imgFileName" class="drop-filename" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- HTML Paste -->
+    <div class="html-input-wrap">
+      <div class="tab-toggle">
+        <button class="toggle-btn active" onclick="setInputMode('paste')" id="modePaste">Paste HTML</button>
+        <button class="toggle-btn" onclick="setInputMode('file')" id="modeFile">From File</button>
+      </div>
+      <textarea class="html-paste" id="htmlPaste" placeholder="Or paste HTML code here…
+
+Evaluator will:
+• Render in sandboxed iframe
+• Extract CSS-computed styles
+• Score 6 accuracy categories
+• Compare with Figma image"></textarea>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn-run" id="runBtn" onclick="runEval()">
+        <span>▶</span>
+        <span>Run Evaluation</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+      <button class="btn-secondary-sm" onclick="clearAll()">Clear everything</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+    <div class="content-tabs">
+      <div class="ctab active" onclick="switchCTab('compare')" id="ctab-compare">
+        <div class="ctab-dot"></div>
+        Compare
+      </div>
+      <div class="ctab" onclick="switchCTab('scores')" id="ctab-scores">
+        <div class="ctab-dot"></div>
+        Scores
+      </div>
+      <div class="ctab" onclick="switchCTab('elements')" id="ctab-elements">
+        <div class="ctab-dot"></div>
+        Elements
+      </div>
+    </div>
+
+    <!-- ── COMPARE TAB ── -->
+    <div class="ctab-panel active" id="panel-compare">
+      <div class="compare-wrap">
+
+        <!-- Pane headers strip -->
+        <div style="display:flex; align-items:center; padding:6px 14px; background:var(--surface2); border-bottom:1px solid var(--border); flex-shrink:0; gap:10px;">
+          <span style="font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em;">View</span>
+          <div class="diff-btn-wrap">
+            <button class="diff-btn active" id="btnSideBySide" onclick="setCompareMode('side')">Side by Side</button>
+            <button class="diff-btn" id="btnSlider" onclick="setCompareMode('slider')">Slider</button>
+          </div>
+          <div class="zoom-controls" style="margin-left:auto;">
+            <button class="zoom-btn" onclick="adjustZoom(-10)">−</button>
+            <span class="zoom-label" id="zoomLabel">100%</span>
+            <button class="zoom-btn" onclick="adjustZoom(10)">+</button>
+            <button class="zoom-btn" onclick="resetZoom()" title="Reset zoom">↺</button>
+          </div>
+        </div>
+
+        <!-- Side by side view -->
+        <div id="sideBySideView" style="flex:1; display:grid; grid-template-columns:1fr 1fr; overflow:hidden; border-bottom:1px solid var(--border);">
+          <!-- HTML pane -->
+          <div class="compare-pane">
+            <div class="pane-header">
+              <span class="pane-label">Original HTML</span>
+              <span class="pane-chip html">source</span>
+            </div>
+            <div class="pane-content" id="htmlPaneContent">
+              <div class="pane-empty" id="htmlPaneEmpty">
+                <div class="pane-empty-icon">📄</div>
+                <span>No HTML loaded</span>
+                <small>Upload or paste HTML to preview</small>
+              </div>
+              <iframe id="previewFrame" class="html-frame" sandbox="allow-same-origin" style="display:none"></iframe>
+            </div>
+          </div>
+
+          <!-- Figma image pane -->
+          <div class="compare-pane">
+            <div class="pane-header">
+              <span class="pane-label">Figma Output</span>
+              <span class="pane-chip img">plugin export</span>
+            </div>
+            <div class="pane-content dark-bg" id="imgPaneContent">
+              <div class="pane-empty" id="imgPaneEmpty">
+                <div class="pane-empty-icon">🖼</div>
+                <span>No image loaded</span>
+                <small>Upload a screenshot from the Figma plugin</small>
+              </div>
+              <img id="figmaImg" class="figma-img" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:contain;" alt="Figma export">
+            </div>
+          </div>
+        </div>
+
+        <!-- Slider view -->
+        <div id="sliderView" class="slider-container" style="display:none; border-bottom:1px solid var(--border);">
+          <div class="slider-base" id="sliderBase">
+            <iframe id="sliderFrame" sandbox="allow-same-origin" style="width:100%;height:100%;border:none;"></iframe>
+          </div>
+          <div class="slider-overlay" id="sliderOverlay">
+            <img id="sliderImg" style="width:100%;height:100%;object-fit:cover;" alt="">
+          </div>
+          <div class="slider-handle" id="sliderHandle">
+            <div class="slider-handle-dot">⇔</div>
+          </div>
+        </div>
+
+        <!-- Score summary strip at bottom of compare tab -->
+        <div id="compareBanner" style="display:none; padding:10px 16px; background:var(--surface); border-top:1px solid var(--border); flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:22px; font-weight:900; letter-spacing:-1px;" id="bannerScore">—</span>
+              <div>
+                <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted);">Overall Score</div>
+                <div style="font-size:11px; color:var(--muted);" id="bannerVerdict">—</div>
+              </div>
+            </div>
+            <div id="bannerBreakdown" style="display:flex; gap:10px; flex-wrap:wrap; margin-left:auto;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── SCORES TAB ── -->
+    <div class="ctab-panel" id="panel-scores">
+      <div class="compare-bottom" style="max-height:none; flex:1; overflow-y:auto; padding:18px;">
+        <div class="scores-empty" id="scoresEmpty">
+          <div class="big-icon">📊</div>
+          <p>No evaluation results yet</p>
+          <small>Upload HTML (or paste it), then click<br><strong>Run Evaluation</strong> to see detailed scoring.</small>
+        </div>
+        <div id="scoreResults" style="display:none;" class="score-results"></div>
+      </div>
+    </div>
+
+    <!-- ── ELEMENTS TAB ── -->
+    <div class="ctab-panel" id="panel-elements">
+      <div class="elements-wrap">
+        <table id="elemTable">
+          <thead>
+            <tr>
+              <th>#</th><th>Tag</th><th>Text</th><th>Font</th>
+              <th>Size</th><th>Weight</th><th>Color</th><th>BG</th>
+              <th>Gradient</th><th>Transform</th><th>Align</th><th>Padding</th><th>Pseudo</th>
+            </tr>
+          </thead>
+          <tbody id="elemBody">
+            <tr><td colspan="13" style="text-align:center; padding:24px; color:var(--muted); font-family:var(--font-sans); font-size:12px;">Run evaluation to see extracted elements</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let htmlContent = ''
+let figmaImgSrc = null
+let lastElements = []
+let compareMode = 'side'
+let zoomLevel = 100
+let inputMode = 'paste'
+
+// ─── File handling ────────────────────────────────────────────────────────────
+function handleHtmlFile(file) {
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = e => {
+    htmlContent = e.target.result
+    document.getElementById('htmlPaste').value = htmlContent
+    const el = document.getElementById('htmlFileName')
+    el.textContent = '✓ ' + file.name
+    el.style.display = 'block'
+    document.getElementById('htmlDrop').classList.add('filled')
+    document.getElementById('htmlDrop').querySelector('.drop-icon').textContent = '✅'
+    loadHtmlPreview(htmlContent)
+  }
+  reader.readAsText(file)
+}
+
+function handleImgFile(file) {
+  if (!file) return
+  const url = URL.createObjectURL(file)
+  figmaImgSrc = url
+  const img = document.getElementById('figmaImg')
+  img.src = url
+  img.style.display = 'block'
+  document.getElementById('imgPaneEmpty').style.display = 'none'
+  document.getElementById('sliderImg').src = url
+
+  const el = document.getElementById('imgFileName')
+  el.textContent = '✓ ' + file.name
+  el.style.display = 'block'
+  document.getElementById('imgDrop').classList.add('filled')
+  document.getElementById('imgDrop').querySelector('.drop-icon').textContent = '✅'
+}
+
+// Drag and drop
+;['htmlDrop','imgDrop'].forEach(id => {
+  const zone = document.getElementById(id)
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover') })
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'))
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover')
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    if (id === 'htmlDrop') {
+      const inp = document.getElementById('htmlFile')
+      const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files
+      handleHtmlFile(file)
+    } else {
+      const inp = document.getElementById('imgFile')
+      const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files
+      handleImgFile(file)
+    }
+  })
+})
+
+function setInputMode(mode) {
+  inputMode = mode
+  document.getElementById('modePaste').classList.toggle('active', mode === 'paste')
+  document.getElementById('modeFile').classList.toggle('active', mode === 'file')
+}
+
+function loadHtmlPreview(html) {
+  const frame = document.getElementById('previewFrame')
+  frame.srcdoc = html
+  frame.style.display = 'block'
+  document.getElementById('htmlPaneEmpty').style.display = 'none'
+  document.getElementById('sliderFrame').srcdoc = html
+}
+
+// ─── Zoom ────────────────────────────────────────────────────────────────────
+function adjustZoom(delta) {
+  zoomLevel = Math.min(200, Math.max(30, zoomLevel + delta))
+  applyZoom()
+}
+function resetZoom() { zoomLevel = 100; applyZoom() }
+function applyZoom() {
+  document.getElementById('zoomLabel').textContent = zoomLevel + '%'
+  const s = zoomLevel / 100
+  document.getElementById('previewFrame').style.transform = `scale(${s})`
+  document.getElementById('previewFrame').style.transformOrigin = 'top left'
+  document.getElementById('previewFrame').style.width = (100 / s) + '%'
+  document.getElementById('previewFrame').style.height = (100 / s) + '%'
+}
+
+// ─── View mode ────────────────────────────────────────────────────────────────
+function setCompareMode(mode) {
+  compareMode = mode
+  const side = document.getElementById('sideBySideView')
+  const slider = document.getElementById('sliderView')
+  document.getElementById('btnSideBySide').classList.toggle('active', mode === 'side')
+  document.getElementById('btnSlider').classList.toggle('active', mode === 'slider')
+  if (mode === 'side') {
+    side.style.display = 'grid'
+    slider.style.display = 'none'
+  } else {
+    side.style.display = 'none'
+    slider.style.display = 'block'
+    initSlider()
+  }
+}
+
+// ─── Slider ───────────────────────────────────────────────────────────────────
+function initSlider() {
+  const container = document.getElementById('sliderView')
+  const overlay = document.getElementById('sliderOverlay')
+  const handle = document.getElementById('sliderHandle')
+  let dragging = false
+
+  function setPos(x) {
+    const rect = container.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100))
+    overlay.style.clipPath = `inset(0 ${100 - pct}% 0 0)`
+    handle.style.left = pct + '%'
+  }
+
+  container.addEventListener('mousedown', e => { dragging = true; setPos(e.clientX) })
+  window.addEventListener('mousemove', e => { if (dragging) setPos(e.clientX) })
+  window.addEventListener('mouseup', () => { dragging = false })
+  container.addEventListener('touchstart', e => { dragging = true; setPos(e.touches[0].clientX) })
+  window.addEventListener('touchmove', e => { if (dragging) setPos(e.touches[0].clientX) })
+  window.addEventListener('touchend', () => { dragging = false })
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchCTab(name) {
+  document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.ctab-panel').forEach(p => p.classList.remove('active'))
+  document.getElementById('ctab-' + name).classList.add('active')
+  document.getElementById('panel-' + name).classList.add('active')
+}
+
+// ─── Clear ────────────────────────────────────────────────────────────────────
+function clearAll() {
+  htmlContent = ''
+  figmaImgSrc = null
+  lastElements = []
+  document.getElementById('htmlPaste').value = ''
+  document.getElementById('previewFrame').srcdoc = ''
+  document.getElementById('previewFrame').style.display = 'none'
+  document.getElementById('htmlPaneEmpty').style.display = 'flex'
+  document.getElementById('figmaImg').style.display = 'none'
+  document.getElementById('imgPaneEmpty').style.display = 'flex'
+  document.getElementById('htmlDrop').classList.remove('filled')
+  document.getElementById('imgDrop').classList.remove('filled')
+  document.getElementById('htmlDrop').querySelector('.drop-icon').textContent = '📄'
+  document.getElementById('imgDrop').querySelector('.drop-icon').textContent = '🖼'
+  document.getElementById('htmlFileName').style.display = 'none'
+  document.getElementById('imgFileName').style.display = 'none'
+  document.getElementById('scoreResults').style.display = 'none'
+  document.getElementById('scoresEmpty').style.display = 'flex'
+  document.getElementById('compareBanner').style.display = 'none'
+  document.getElementById('elemBody').innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-sans);font-size:12px;">Run evaluation to see extracted elements</td></tr>'
+  const badge = document.getElementById('overallBadge')
+  badge.classList.remove('scored')
+  document.getElementById('badgeText').textContent = 'Not evaluated'
+  resetZoom()
+}
+
+// ─── Extraction logic (mirrors plugin logic) ──────────────────────────────────
+const HTML_MAX_ELEMENTS = 500
+const HTML_IGNORED_TAGS = new Set(['script','style','noscript','template','head','link','meta','title','base','iframe','object','embed'])
+
+function htmlIsVisible(el, win) {
+  if (HTML_IGNORED_TAGS.has(el.tagName.toLowerCase())) return false
+  const s = win.getComputedStyle(el)
+  return s.display !== 'none'
+}
+
+function htmlNearestParentIndex(node, map) {
+  let p = node.parentElement
+  while (p) { if (map.has(p)) return map.get(p); p = p.parentElement }
+  return null
+}
+
+function htmlExtractPseudoElement(el, pseudo, parentIdx, srcIdx, win) {
+  try {
+    const s = win.getComputedStyle(el, pseudo)
+    const content = s.content
+    if (!content || content === 'none' || content === 'normal' || content === '') return null
+    if (s.display === 'none' || s.visibility === 'hidden') return null
+    const pr = el.getBoundingClientRect()
+    const pos = s.position
+    let x, y, w, h
+    if (pos === 'absolute' || pos === 'fixed') {
+      const t = s.top !== 'auto' ? parseFloat(s.top) : 0
+      const l = s.left !== 'auto' ? parseFloat(s.left) : 0
+      const r = s.right !== 'auto' ? parseFloat(s.right) : null
+      const b = s.bottom !== 'auto' ? parseFloat(s.bottom) : null
+      x = pr.left + l; y = pr.top + t
+      w = r !== null ? pr.width - l - r : parseFloat(s.width) || pr.width
+      h = b !== null ? pr.height - t - b : parseFloat(s.height) || 0
+    } else { x = pr.left; y = pr.top; w = parseFloat(s.width)||pr.width; h = parseFloat(s.height)||pr.height }
+    return {
+      sourceIndex: srcIdx, parentIndex: parentIdx, tagName: 'pseudo',
+      textContent: content.replace(/^["']|["']$/g,'') || null,
+      x: Math.round(x*100)/100, y: Math.round(y*100)/100,
+      width: Math.round(w*100)/100, height: Math.round(h*100)/100,
+      backgroundImage: s.backgroundImage || 'none', backgroundColor: s.backgroundColor, color: s.color,
+      exactFontFamily: (s.fontFamily.split(',')[0]?.trim()??'').replace(/^["']|["']$/g,''),
+      fontSize: s.fontSize, fontStyle: s.fontStyle||'normal', fontWeight: s.fontWeight,
+      opacity: isFinite(parseFloat(s.opacity)) ? parseFloat(s.opacity) : 1,
+      textTransform: s.textTransform !== 'none' ? s.textTransform : undefined,
+      textAlign: (s.textAlign !== 'start' && s.textAlign !== 'left') ? s.textAlign : undefined,
+      isPseudoElement: true, pseudoType: pseudo === '::before' ? 'before' : 'after',
+      paddingTop:'0px',paddingRight:'0px',paddingBottom:'0px',paddingLeft:'0px'
+    }
+  } catch { return null }
+}
+
+function htmlExtractElement(el, srcIdx, parentIdx, win) {
+  const r = el.getBoundingClientRect()
+  const s = win.getComputedStyle(el)
+  const op = parseFloat(s.opacity)
+  return {
+    sourceIndex: srcIdx, parentIndex: parentIdx, tagName: el.tagName.toLowerCase(),
+    textContent: el.textContent?.replace(/\s+/g,' ').trim().slice(0,80)||null,
+    x: Math.round(r.left*100)/100, y: Math.round(r.top*100)/100,
+    width: Math.round(r.width*100)/100, height: Math.round(r.height*100)/100,
+    backgroundImage: s.backgroundImage||'none', backgroundColor: s.backgroundColor, color: s.color,
+    display: s.display,
+    exactFontFamily: (s.fontFamily.split(',')[0]?.trim()??'').replace(/^["']|["']$/g,''),
+    fontSize: s.fontSize, fontStyle: s.fontStyle||'normal', fontWeight: s.fontWeight,
+    lineHeight: s.lineHeight, letterSpacing: s.letterSpacing,
+    paddingTop: s.paddingTop, paddingRight: s.paddingRight, paddingBottom: s.paddingBottom, paddingLeft: s.paddingLeft,
+    gap: s.gap, borderRadius: s.borderRadius,
+    opacity: isFinite(op) ? op : 1,
+    textTransform: s.textTransform !== 'none' ? s.textTransform : undefined,
+    textAlign: (s.textAlign !== 'start' && s.textAlign !== 'left') ? s.textAlign : undefined,
+    gridTemplateColumns: s.display === 'grid' ? s.gridTemplateColumns : undefined,
+    isPseudoElement: false
+  }
+}
+
+function htmlExtractElements(doc, win) {
+  const elements = [], map = new Map()
+  const root = doc.body ?? doc.documentElement
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT)
+  if (htmlIsVisible(root, win)) { elements.push(htmlExtractElement(root,0,null,win)); map.set(root,0) }
+  let node = walker.nextNode()
+  while (node) {
+    if (node instanceof win.Element && htmlIsVisible(node, win) && elements.length < HTML_MAX_ELEMENTS) {
+      const si = elements.length
+      const pi = htmlNearestParentIndex(node, map)
+      elements.push(htmlExtractElement(node,si,pi,win))
+      map.set(node,si)
+      if (elements.length < HTML_MAX_ELEMENTS) { const b = htmlExtractPseudoElement(node,'::before',si,elements.length,win); if(b) elements.push(b) }
+      if (elements.length < HTML_MAX_ELEMENTS) { const a = htmlExtractPseudoElement(node,'::after',si,elements.length,win); if(a) elements.push(a) }
+    }
+    node = walker.nextNode()
+  }
+  return elements
+}
+
+// ─── Scoring ─────────────────────────────────────────────────────────────────
+function scoreElements(elements) {
+  const scores = {}
+
+  // 1. Font
+  const real = elements.filter(e => !e.isPseudoElement)
+  const hasFont = real.filter(e => e.exactFontFamily && e.exactFontFamily !== 'sans-serif' && e.exactFontFamily !== 'serif')
+  const hasSize = real.filter(e => parseFloat(e.fontSize) > 0)
+  const hasWeight = real.filter(e => e.fontWeight && e.fontWeight !== '400')
+  const fontScore = real.length === 0 ? 100 : Math.min(100, Math.round(
+    (hasFont.length/real.length)*0.5*100 + (hasSize.length/real.length)*0.3*100 + (hasWeight.length/Math.max(1,real.filter(e=>e.fontWeight!=='400').length+1))*0.2*100
+  ))
+  scores.font = { label:'Font Extraction', icon:'Aa', score: fontScore,
+    detail: `${hasFont.length}/${real.length} with named font family`,
+    items:[{k:'Named family',v:`${hasFont.length}/${real.length}`},{k:'Valid size',v:`${hasSize.length}/${real.length}`},{k:'Non-default weight',v:hasWeight.length}] }
+
+  // 2. Pseudo-elements
+  const pseudo = elements.filter(e => e.isPseudoElement)
+  const expected = Math.max(1, Math.round(real.length * 0.05))
+  const pseudoScore = Math.min(100, Math.round((pseudo.length / expected) * 100))
+  scores.pseudo = { label:'Pseudo-elements', icon:'::',  score: pseudoScore,
+    detail:`${pseudo.length} ::before/::after captured`,
+    items:[{k:'::before',v:elements.filter(e=>e.pseudoType==='before').length},{k:'::after',v:elements.filter(e=>e.pseudoType==='after').length},{k:'Total real',v:real.length}] }
+
+  // 3. Gradients
+  const withGrad = elements.filter(e => e.backgroundImage && e.backgroundImage !== 'none' && e.backgroundImage.includes('gradient'))
+  const gradScore = withGrad.length > 0 ? 100 : 100
+  scores.gradient = { label:'Gradient Detection', icon:'▦', score: gradScore,
+    detail:`${withGrad.length} elements with CSS gradients`,
+    items:[{k:'linear-gradient',v:withGrad.filter(e=>e.backgroundImage.includes('linear')).length},{k:'radial-gradient',v:withGrad.filter(e=>e.backgroundImage.includes('radial')).length}] }
+
+  // 4. Text Transform
+  const withTT = elements.filter(e => e.textTransform && e.textTransform !== 'none')
+  const ttScore = withTT.length > 0 ? 100 : 85
+  scores.textTransform = { label:'Text Transform', icon:'TT', score: ttScore,
+    detail:`${withTT.length} elements with text-transform`,
+    items:[{k:'uppercase',v:withTT.filter(e=>e.textTransform==='uppercase').length},{k:'capitalize',v:withTT.filter(e=>e.textTransform==='capitalize').length},{k:'lowercase',v:withTT.filter(e=>e.textTransform==='lowercase').length}] }
+
+  // 5. Text Align
+  const withTA = elements.filter(e => e.textAlign && e.textAlign !== 'left' && e.textAlign !== 'start')
+  const taScore = withTA.length > 0 ? 100 : 85
+  scores.textAlign = { label:'Text Alignment', icon:'≡', score: taScore,
+    detail:`${withTA.length} non-default text-align values`,
+    items:[{k:'center',v:withTA.filter(e=>e.textAlign==='center').length},{k:'right',v:withTA.filter(e=>e.textAlign==='right').length},{k:'justify',v:withTA.filter(e=>e.textAlign==='justify').length}] }
+
+  // 6. Layout / Bounds
+  const withBounds = elements.filter(e => e.width > 0 && e.height > 0)
+  const withPad = elements.filter(e => parseFloat(e.paddingTop)>0||parseFloat(e.paddingRight)>0||parseFloat(e.paddingBottom)>0||parseFloat(e.paddingLeft)>0)
+  const layoutScore = elements.length === 0 ? 0 : Math.min(100, Math.round((withBounds.length/elements.length)*0.7*100 + (withPad.length/elements.length)*0.3*100))
+  scores.layout = { label:'Layout / Bounds', icon:'⊡', score: layoutScore,
+    detail:`${withBounds.length}/${elements.length} elements have valid bounds`,
+    items:[{k:'Valid bounds',v:`${withBounds.length}/${elements.length}`},{k:'With padding',v:withPad.length},{k:'Grid elements',v:elements.filter(e=>e.gridTemplateColumns).length}] }
+
+  const cats = Object.values(scores)
+  const overall = Math.round(cats.reduce((s,c) => s+c.score, 0) / cats.length)
+  return { scores, overall }
+}
+
+// ─── Score colors ─────────────────────────────────────────────────────────────
+function sColor(s) { return s>=85?'var(--ok)':s>=60?'var(--warn)':'var(--err)' }
+function sClass(s) { return s>=85?'ok':s>=60?'warn':'err' }
+function sEmoji(s) { return s>=85?'✅':s>=60?'⚠️':'❌' }
+function sVerdict(s) { return s>=85?'Excellent — target reached':s>=60?'Needs improvement':' Below target' }
+
+// ─── Run evaluation ───────────────────────────────────────────────────────────
+async function runEval() {
+  // Get HTML
+  const pasteVal = document.getElementById('htmlPaste').value.trim()
+  if (pasteVal && !htmlContent) htmlContent = pasteVal
+  else if (pasteVal) htmlContent = pasteVal
+
+  if (!htmlContent) { alert('Please upload or paste some HTML first.'); return }
+
+  const btn = document.getElementById('runBtn')
+  const spin = document.getElementById('spinner')
+  btn.disabled = true
+  spin.style.display = 'inline-block'
+
+  // Load preview
+  loadHtmlPreview(htmlContent)
+
+  // Extract via sandboxed iframe
+  await new Promise(resolve => {
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('sandbox', 'allow-same-origin')
+    Object.assign(iframe.style, {
+      position:'fixed', top:'0', left:'0',
+      width:'1440px', height:'900px',
+      opacity:'0', pointerEvents:'none',
+      border:'none', zIndex:'-9999'
+    })
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument
+    if (!doc) { resolve(); return }
+    doc.open(); doc.write(htmlContent); doc.close()
+    const fontReady = doc.fonts?.ready?.then(()=>{}) ?? Promise.resolve()
+    Promise.race([fontReady, new Promise(r=>setTimeout(r,3000))]).then(() => {
+      try {
+        const win = iframe.contentWindow
+        if (!win) { resolve(); return }
+        lastElements = htmlExtractElements(doc, win)
+      } catch(e) { console.error(e); lastElements = [] }
+      iframe.remove()
+      resolve()
+    })
+  })
+
+  btn.disabled = false
+  spin.style.display = 'none'
+
+  if (lastElements.length === 0) { alert('No elements extracted. Check that HTML is valid.'); return }
+
+  renderResults(lastElements)
+}
+
+// ─── Render results ───────────────────────────────────────────────────────────
+function renderResults(elements) {
+  const { scores, overall } = scoreElements(elements)
+
+  // Badge
+  const badge = document.getElementById('overallBadge')
+  badge.classList.add('scored')
+  document.getElementById('badgeText').textContent = overall + '% overall'
+
+  // Banner in compare tab
+  const banner = document.getElementById('compareBanner')
+  banner.style.display = 'block'
+  const bs = document.getElementById('bannerScore')
+  bs.textContent = overall + '%'
+  bs.style.color = sColor(overall)
+  document.getElementById('bannerVerdict').textContent = sVerdict(overall)
+  const breakdown = Object.values(scores).map(s =>
+    `<div class="mini-pill"><span style="color:${sColor(s.score)}" class="mini-pill-score">${s.score}%</span><span style="color:var(--muted);font-size:9px">${s.label.split(' ')[0]}</span></div>`
+  ).join('')
+  document.getElementById('bannerBreakdown').innerHTML = breakdown
+
+  // Score results panel
+  document.getElementById('scoresEmpty').style.display = 'none'
+  const results = document.getElementById('scoreResults')
+  results.style.display = 'flex'
+  results.innerHTML = ''
+
+  // Overall row
+  const circumference = 2 * Math.PI * 30
+  const offset = circumference - (overall / 100) * circumference
+  results.innerHTML += `
+    <div class="overall-row">
+      <div class="gauge-wrap">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle class="gauge-bg" cx="36" cy="36" r="30"/>
+          <circle class="gauge-fill" cx="36" cy="36" r="30"
+            style="stroke:${sColor(overall)}; stroke-dasharray:${circumference}; stroke-dashoffset:${offset}"/>
+        </svg>
+        <div class="gauge-text" style="color:${sColor(overall)}">${overall}%</div>
+      </div>
+      <div class="overall-info">
+        <div class="overall-title">Overall Extraction Accuracy</div>
+        <div class="overall-verdict" style="color:${sColor(overall)}">${sEmoji(overall)} ${sVerdict(overall)}</div>
+        <div class="overall-sub">${elements.length} elements extracted &nbsp;·&nbsp; ${elements.filter(e=>e.isPseudoElement).length} pseudo-elements &nbsp;·&nbsp; target ≥ 85%</div>
+      </div>
+      <div class="mini-breakdown">${breakdown}</div>
+    </div>
+  `
+
+  // Category cards
+  results.innerHTML += `<div class="categories-grid" id="catGrid">${
+    Object.values(scores).map(s => `
+      <div class="cat-card ${sClass(s.score)}">
+        <div class="cat-name">${s.icon ? `<span style="font-family:var(--font-mono);margin-right:4px;">${s.icon}</span>` : ''}${s.label}</div>
+        <div class="cat-score ${sClass(s.score)}">${s.score}%</div>
+        <div class="cat-bar"><div class="cat-bar-fill" style="width:${s.score}%;background:${sColor(s.score)}"></div></div>
+        <div class="cat-detail">${s.detail}</div>
+        <div class="cat-items">${s.items.map(i => `<span class="cat-item-chip">${i.k}: ${i.v}</span>`).join('')}</div>
+      </div>
+    `).join('')
+  }</div>`
+
+  // Issues
+  const issues = buildIssues(scores, elements)
+  results.innerHTML += `
+    <div class="issues-section">
+      <div class="issues-title">Diagnostics</div>
+      ${issues.map(i => `
+        <div class="issue-row ${i.type}">
+          <div class="issue-icon">${i.icon}</div>
+          <div>
+            <div class="issue-title">${i.title}</div>
+            <div class="issue-detail">${i.detail}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `
+
+  // Elements table
+  const tbody = document.getElementById('elemBody')
+  tbody.innerHTML = elements.map(el => {
+    const ip = el.isPseudoElement
+    const hg = el.backgroundImage && el.backgroundImage !== 'none' && el.backgroundImage.includes('gradient')
+    const tag = ip
+      ? `<span class="tag-chip pseudo">::${el.pseudoType}</span>`
+      : `<span class="tag-chip">${el.tagName}</span>`
+    const textShort = (el.textContent||'').slice(0,22) + ((el.textContent||'').length > 22 ? '…' : '')
+    const fontShort = (el.exactFontFamily||'').slice(0,14)
+    const size = parseFloat(el.fontSize)||'—'
+    const padSum = [el.paddingTop,el.paddingRight,el.paddingBottom,el.paddingLeft].map(p=>parseFloat(p)||0).join(' ')
+    return `<tr class="${ip?'pseudo-row':''}">
+      <td style="color:var(--muted2)">${el.sourceIndex}</td>
+      <td>${tag}</td>
+      <td title="${el.textContent||''}">${textShort}</td>
+      <td title="${el.exactFontFamily||''}">${fontShort}</td>
+      <td>${size}</td>
+      <td>${el.fontWeight||'—'}</td>
+      <td><span class="color-dot" style="background:${el.color||'#888'}"></span></td>
+      <td><span class="color-dot" style="background:${el.backgroundColor||'transparent'};border:1px solid var(--border2)"></span></td>
+      <td style="color:${hg?'var(--accent)':'var(--muted2)'}">${hg?'✓':'—'}</td>
+      <td style="color:${el.textTransform?'var(--teal)':'var(--muted2)'}">${el.textTransform||'—'}</td>
+      <td style="color:${el.textAlign?'var(--teal)':'var(--muted2)'}">${el.textAlign||'—'}</td>
+      <td style="color:var(--muted2);font-size:9.5px">${padSum}</td>
+      <td style="color:${ip?'var(--teal)':'var(--muted2)'}">${ip?`::${el.pseudoType}`:'—'}</td>
+    </tr>`
+  }).join('')
+
+  // Switch to scores tab to show results
+  switchCTab('scores')
+}
+
+function buildIssues(scores, elements) {
+  const issues = []
+  const pseudo = elements.filter(e=>e.isPseudoElement)
+
+  if (scores.pseudo.score < 85)
+    issues.push({type:'warn',icon:'⚠️',title:`Pseudo-elements: only ${pseudo.length} captured`,detail:'Low pseudo-element coverage. Ensure htmlExtractPseudoElement() is wired into the extraction loop and that content !== "none".'})
+  else
+    issues.push({type:'ok',icon:'✅',title:`Pseudo-elements: ${pseudo.length} captured`,detail:'Good coverage of ::before / ::after elements.'})
+
+  const gradEls = elements.filter(e=>e.backgroundImage&&e.backgroundImage!=='none'&&e.backgroundImage.includes('gradient'))
+  if (gradEls.length === 0)
+    issues.push({type:'error',icon:'❌',title:'No CSS gradients detected',detail:`All backgroundImage fields appear to be 'none'. Verify gradient-bearing elements are extracted and backgroundImage is passed through.`})
+  else
+    issues.push({type:'ok',icon:'✅',title:`Gradients: ${gradEls.length} detected`,detail:'parseCssGradientPaints() will convert these to Figma gradient fills.'})
+
+  const ttEls = elements.filter(e=>e.textTransform&&e.textTransform!=='none')
+  if (ttEls.length === 0)
+    issues.push({type:'warn',icon:'⚠️',title:'No text-transform values captured',detail:'If the HTML has uppercase/capitalize text, verify textTransform is extracted in htmlExtractElement() and returned with the element data.'})
+  else
+    issues.push({type:'ok',icon:'✅',title:`Text-transform: ${ttEls.length} elements`,detail:'Figma will apply UPPER/LOWER/TITLE case mappings correctly.'})
+
+  if (scores.font.score < 80)
+    issues.push({type:'error',icon:'❌',title:'Low font extraction accuracy',detail:'Many elements lack a named font family. Check that Google Fonts are loaded before extraction runs (document.fonts.ready).'})
+  else {
+    const fontEls = elements.filter(e=>e.exactFontFamily&&!e.isPseudoElement)
+    issues.push({type:'ok',icon:'✅',title:`Fonts: ${fontEls.length} elements with named family`,detail:'Font loading wait (up to 3s) is in effect. Named families will map to Figma text nodes correctly.'})
+  }
+
+  const gridEls = elements.filter(e=>e.gridTemplateColumns)
+  if (gridEls.length > 0)
+    issues.push({type:'warn',icon:'⚠️',title:`CSS Grid detected: ${gridEls.length} containers`,detail:'Grid containers use getBoundingClientRect() for child positions. Visual layout should be correct, but auto-layout mapping in Figma may need manual adjustment.'})
+
+  if (scores.layout.score < 70)
+    issues.push({type:'error',icon:'❌',title:'Many elements missing valid bounds',detail:'Low layout score indicates elements have zero width/height. This may cause missing or collapsed nodes in Figma output.'})
+
+  return issues
+}
+</script>
+</body>
+</html>

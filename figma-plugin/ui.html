@@ -485,7 +485,9 @@
       }
       if (msg.type === 'DONE') {
         progressFill.style.width = '100%';
-        log(`Done. Created ${msg.nodeCount} nodes.`, 'success');
+        const styleCount = msg.styles ? (Number(msg.styles.paint || 0) + Number(msg.styles.text || 0)) : 0;
+        const styleText = styleCount > 0 ? ` and ${styleCount} local styles` : '';
+        log(`Done. Created ${msg.nodeCount} nodes${styleText}.`, 'success');
         buildBtn.disabled = false;
       }
       if (msg.type === 'ERROR') {

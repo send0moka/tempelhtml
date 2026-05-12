@@ -64,15 +64,18 @@ async function buildFromSnapshot(data) {
     progress(`Warning: ${warning}`);
   }
 
-  progress('Pre-loading fonts...', 92);
+  progress('Pre-loading fonts...', 91);
   await preloadFonts(figmaTree);
+
+  progress('Creating local styles...', 94);
+  const styleRegistry = await createLocalStylesFromTree(figmaTree);
 
   progress('Building nodes...', 96);
   let nodeCount = 0;
   const page = figma.currentPage;
 
   for (const nodeSpec of figmaTree) {
-    const node = await buildNode(nodeSpec, 'NONE');
+    const node = await buildNode(nodeSpec, 'NONE', styleRegistry);
     if (node) {
       page.appendChild(node);
       nodeCount++;
@@ -82,8 +85,8 @@ async function buildFromSnapshot(data) {
   layoutTopLevelNodes(page);
 
   progress('Done.', 100);
-  figma.ui.postMessage({ type: 'DONE', nodeCount: nodeCount });
-  figma.notify(`tempelhtml: ${nodeCount} nodes created`);
+  figma.ui.postMessage({ type: 'DONE', nodeCount: nodeCount, styles: styleRegistry.counts });
+  figma.notify(`tempelhtml: ${nodeCount} nodes, ${styleRegistry.counts.paint + styleRegistry.counts.text} styles synced`);
 }
 
 function progress(text, percent) {
@@ -303,30 +306,863 @@ function normalizeFontName(font) {
   };
 }
 
-// Node builder
+// Local style creation
 
-async function buildNode(spec, parentLayoutMode) {
-  if (spec.type === 'TEXT') {
-    return buildTextNode(spec);
+const STYLE_NAMESPACE = 'TempelHTML';
+
+async function createLocalStylesFromTree(nodes) {
+  const catalog = buildLocalStyleCatalog(nodes || []);
+  const paintByKey = {};
+  const textByKey = {};
+
+  const localPaintStyles = await getLocalStylesSafe('paint');
+  const localTextStyles = await getLocalStylesSafe('text');
+
+  if (typeof figma.createPaintStyle === 'function') {
+    for (const def of catalog.paintStyles) {
+      const styleId = ensurePaintStyle(def, localPaintStyles);
+      if (styleId) {
+        paintByKey[def.key] = styleId;
+      }
+    }
   }
-  return buildFrameNode(spec, parentLayoutMode);
+
+  if (typeof figma.createTextStyle === 'function') {
+    for (const def of catalog.textStyles) {
+      const styleId = await ensureTextStyle(def, localTextStyles);
+      if (styleId) {
+        textByKey[def.key] = styleId;
+      }
+    }
+  }
+
+  return {
+    paint: paintByKey,
+    text: textByKey,
+    counts: {
+      paint: Object.keys(paintByKey).length,
+      text: Object.keys(textByKey).length,
+    },
+  };
 }
 
-function buildTextNode(spec) {
+function buildLocalStyleCatalog(nodes) {
+  const paintMap = {};
+  const textMap = {};
+
+  function walk(spec) {
+    if (!spec) {
+      return;
+    }
+
+    collectPaintDefinition(paintMap, spec.fills, getPaintUsage(spec, 'fill'));
+    collectPaintDefinition(paintMap, spec.strokes, getPaintUsage(spec, 'stroke'));
+
+    if (spec.type === 'TEXT') {
+      collectTextDefinition(textMap, spec);
+
+      const textRuns = spec.textRuns || [];
+      for (let index = 0; index < textRuns.length; index++) {
+        const run = textRuns[index];
+        collectTextDefinition(textMap, run);
+        collectPaintDefinition(paintMap, run && run.fills, 'text fill');
+        collectPaintDefinition(paintMap, run && run.strokes, 'text stroke');
+      }
+    }
+
+    const children = spec.children || [];
+    for (let index = 0; index < children.length; index++) {
+      walk(children[index]);
+    }
+  }
+
+  for (let index = 0; index < nodes.length; index++) {
+    walk(nodes[index]);
+  }
+
+  const paintStyles = Object.keys(paintMap).map((key) => paintMap[key]);
+  const textStyles = Object.keys(textMap).map((key) => textMap[key]);
+
+  assignPaintStyleNames(paintStyles);
+  assignTextStyleNames(textStyles);
+
+  return { paintStyles, textStyles };
+}
+
+function collectPaintDefinition(map, paints, usage) {
+  const key = makePaintStyleKey(paints);
+  if (!key) {
+    return;
+  }
+
+  if (!map[key]) {
+    map[key] = {
+      key,
+      paints: cloneValue(paints),
+      usages: {},
+      count: 0,
+    };
+  }
+
+  map[key].usages[usage] = (map[key].usages[usage] || 0) + 1;
+  map[key].count++;
+}
+
+function collectTextDefinition(map, spec) {
+  const style = normalizeTextStyleInput(spec);
+  if (!style) {
+    return;
+  }
+
+  const key = makeTextStyleKey(style);
+  if (!map[key]) {
+    map[key] = {
+      key,
+      count: 0,
+      fontName: style.fontName,
+      fontSize: style.fontSize,
+      lineHeight: style.lineHeight,
+      letterSpacing: style.letterSpacing,
+      textCase: style.textCase,
+    };
+  }
+
+  map[key].count++;
+}
+
+function getPaintUsage(spec, kind) {
+  if (kind === 'stroke') {
+    return spec && spec.type === 'TEXT' ? 'text stroke' : 'border';
+  }
+
+  return spec && spec.type === 'TEXT' ? 'text fill' : 'background fill';
+}
+
+function makePaintStyleKey(paints) {
+  if (!Array.isArray(paints) || paints.length === 0) {
+    return null;
+  }
+
+  if (!isStylablePaintList(paints) || paints.every(isFullyTransparentPaint)) {
+    return null;
+  }
+
+  const parts = [];
+  for (let index = 0; index < paints.length; index++) {
+    parts.push(normalizePaintForKey(paints[index]));
+  }
+  return `paint:${parts.join('|')}`;
+}
+
+function isStylablePaintList(paints) {
+  for (let index = 0; index < paints.length; index++) {
+    const paint = paints[index];
+    if (!paint || paint.visible === false) {
+      continue;
+    }
+    if (paint.type !== 'SOLID' && !isGradientPaint(paint)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function normalizePaintForKey(paint) {
+  if (!paint) {
+    return 'none';
+  }
+
+  if (paint.type === 'SOLID') {
+    const color = paint.color || {};
+    return [
+      'solid',
+      roundStyleNumber(color.r || 0, 4),
+      roundStyleNumber(color.g || 0, 4),
+      roundStyleNumber(color.b || 0, 4),
+      roundStyleNumber(getPaintAlpha(paint), 4),
+    ].join(':');
+  }
+
+  const stops = paint.gradientStops || [];
+  const stopParts = [];
+  for (let index = 0; index < stops.length; index++) {
+    const stop = stops[index] || {};
+    const color = stop.color || {};
+    stopParts.push([
+      roundStyleNumber(stop.position || 0, 4),
+      roundStyleNumber(color.r || 0, 4),
+      roundStyleNumber(color.g || 0, 4),
+      roundStyleNumber(color.b || 0, 4),
+      roundStyleNumber(color.a === undefined ? 1 : color.a, 4),
+    ].join(','));
+  }
+
+  return `${paint.type}:${stopParts.join(';')}:${shortHash(JSON.stringify(paint.gradientTransform || []))}`;
+}
+
+function normalizeTextStyleInput(spec) {
+  if (!spec || !spec.fontName || !spec.fontName.family || !spec.fontSize) {
+    return null;
+  }
+
+  return {
+    fontName: normalizeFontName(spec.fontName),
+    fontSize: roundStyleNumber(spec.fontSize, 2),
+    lineHeight: normalizeLineHeightForStyle(spec.lineHeight),
+    letterSpacing: normalizeLetterSpacingForStyle(spec.letterSpacing),
+    textCase: spec.textCase || 'ORIGINAL',
+  };
+}
+
+function makeTextStyleKey(style) {
+  return [
+    'text',
+    style.fontName.family,
+    style.fontName.style,
+    style.fontSize,
+    normalizeLineHeightKey(style.lineHeight),
+    normalizeLetterSpacingKey(style.letterSpacing),
+    style.textCase || 'ORIGINAL',
+  ].join('|');
+}
+
+function normalizeLineHeightForStyle(lineHeight) {
+  if (!lineHeight || !lineHeight.unit) {
+    return { unit: 'AUTO' };
+  }
+
+  if (lineHeight.unit === 'AUTO') {
+    return { unit: 'AUTO' };
+  }
+
+  return {
+    unit: lineHeight.unit,
+    value: roundStyleNumber(lineHeight.value || 0, 2),
+  };
+}
+
+function normalizeLetterSpacingForStyle(letterSpacing) {
+  if (!letterSpacing || !letterSpacing.unit) {
+    return { unit: 'PIXELS', value: 0 };
+  }
+
+  return {
+    unit: letterSpacing.unit,
+    value: roundStyleNumber(letterSpacing.value || 0, 2),
+  };
+}
+
+function normalizeLineHeightKey(lineHeight) {
+  if (!lineHeight || lineHeight.unit === 'AUTO') {
+    return 'AUTO';
+  }
+  return `${lineHeight.unit}:${roundStyleNumber(lineHeight.value || 0, 2)}`;
+}
+
+function normalizeLetterSpacingKey(letterSpacing) {
+  if (!letterSpacing) {
+    return 'PIXELS:0';
+  }
+  return `${letterSpacing.unit}:${roundStyleNumber(letterSpacing.value || 0, 2)}`;
+}
+
+function assignPaintStyleNames(defs) {
+  defs.sort((a, b) => {
+    const aName = buildPaintStyleBaseName(a);
+    const bName = buildPaintStyleBaseName(b);
+    if (aName !== bName) return aName.localeCompare(bName);
+    if (b.count !== a.count) return b.count - a.count;
+    return a.key.localeCompare(b.key);
+  });
+
+  const used = {};
+  for (let index = 0; index < defs.length; index++) {
+    const def = defs[index];
+    const baseName = `${STYLE_NAMESPACE} / ${buildPaintStyleBaseName(def)}`;
+    def.name = makeUniqueStyleName(baseName, getPaintStyleSuffix(def), used);
+    def.description = buildPaintStyleDescription(def);
+  }
+}
+
+function assignTextStyleNames(defs) {
+  defs.sort((a, b) => {
+    const aScale = getTypographyScale(a);
+    const bScale = getTypographyScale(b);
+    if (aScale.order !== bScale.order) return aScale.order - bScale.order;
+    if (b.fontSize !== a.fontSize) return b.fontSize - a.fontSize;
+    return a.key.localeCompare(b.key);
+  });
+
+  const used = {};
+  for (let index = 0; index < defs.length; index++) {
+    const def = defs[index];
+    const scale = getTypographyScale(def);
+    const baseName = `${STYLE_NAMESPACE} / Typography / ${scale.role} / ${scale.size} / ${getFontStyleLabel(def.fontName.style)}`;
+    def.name = makeUniqueStyleName(baseName, getTextStyleSuffix(def), used);
+    def.description = buildTextStyleDescription(def);
+  }
+}
+
+function makeUniqueStyleName(baseName, suffix, used) {
+  let name = baseName;
+  if (used[name]) {
+    name = `${baseName} / ${sanitizeStyleSegment(suffix)}`;
+  }
+
+  let counter = 2;
+  const root = name;
+  while (used[name]) {
+    name = `${root} ${counter}`;
+    counter++;
+  }
+
+  used[name] = true;
+  return name;
+}
+
+function buildPaintStyleBaseName(def) {
+  const paints = def.paints || [];
+  if (paints.length === 1 && paints[0] && paints[0].type === 'SOLID') {
+    const info = getSolidPaintInfo(paints[0]);
+    const base = `Color / ${info.family} / ${info.shade}`;
+    return info.alpha < 0.995 ? `${base} / Alpha ${info.alphaPercent}` : base;
+  }
+
+  if (paints.length === 1 && isGradientPaint(paints[0])) {
+    const gradient = getGradientPaintInfo(paints[0]);
+    return `Color / Gradient / ${gradient.kind} / ${gradient.name}`;
+  }
+
+  return `Color / Composite / ${paints.length} Fills`;
+}
+
+function buildPaintStyleDescription(def) {
+  return `Generated by tempelhtml from HTML. ${describePaintList(def.paints)} Used by ${describeUsage(def.usages)}.`;
+}
+
+function buildTextStyleDescription(def) {
+  return `Generated by tempelhtml from HTML. ${def.fontName.family} ${def.fontName.style}, ${def.fontSize}px, ${formatLineHeight(def.lineHeight)}, ${formatLetterSpacing(def.letterSpacing)}.`;
+}
+
+function getPaintStyleSuffix(def) {
+  const paints = def.paints || [];
+  if (paints.length === 1 && paints[0] && paints[0].type === 'SOLID') {
+    return getSolidPaintInfo(paints[0]).hex.replace('#', '');
+  }
+  return shortHash(def.key).toUpperCase();
+}
+
+function getTextStyleSuffix(def) {
+  return `${def.fontName.family} ${def.fontName.style} ${shortHash(def.key).toUpperCase()}`;
+}
+
+function getTypographyScale(def) {
+  const size = Number(def.fontSize) || 16;
+  const tracking = Math.abs(Number(def.letterSpacing && def.letterSpacing.value) || 0);
+  const isLabel = size <= 16 && (def.textCase === 'UPPER' || tracking >= 0.75);
+
+  if (isLabel) {
+    if (size >= 15) return { role: 'Label', size: 'LG', order: 300 };
+    if (size >= 13) return { role: 'Label', size: 'MD', order: 310 };
+    return { role: 'Label', size: 'SM', order: 320 };
+  }
+
+  if (size >= 96) return { role: 'Display', size: '2XL', order: 10 };
+  if (size >= 72) return { role: 'Display', size: 'XL', order: 20 };
+  if (size >= 56) return { role: 'Display', size: 'LG', order: 30 };
+  if (size >= 44) return { role: 'Display', size: 'MD', order: 40 };
+  if (size >= 36) return { role: 'Heading', size: '2XL', order: 100 };
+  if (size >= 30) return { role: 'Heading', size: 'XL', order: 110 };
+  if (size >= 24) return { role: 'Heading', size: 'LG', order: 120 };
+  if (size >= 20) return { role: 'Heading', size: 'MD', order: 130 };
+  if (size >= 18) return { role: 'Body', size: 'LG', order: 200 };
+  if (size >= 16) return { role: 'Body', size: 'MD', order: 210 };
+  if (size >= 14) return { role: 'Body', size: 'SM', order: 220 };
+  return { role: 'Body', size: 'XS', order: 230 };
+}
+
+function getFontStyleLabel(style) {
+  const normalized = String(style || 'Regular').trim();
+  if (/^italic$/i.test(normalized)) {
+    return 'Regular Italic';
+  }
+  return normalized.replace(/\s+/g, ' ');
+}
+
+function describeUsage(usages) {
+  const labels = Object.keys(usages || {}).sort();
+  if (labels.length === 0) {
+    return 'generated layers';
+  }
+
+  const parts = [];
+  for (let index = 0; index < labels.length; index++) {
+    const label = labels[index];
+    parts.push(`${label} (${usages[label]})`);
+  }
+  return parts.join(', ');
+}
+
+function describePaintList(paints) {
+  if (!paints || paints.length === 0) {
+    return 'No paints.';
+  }
+
+  if (paints.length === 1 && paints[0].type === 'SOLID') {
+    const info = getSolidPaintInfo(paints[0]);
+    const alpha = info.alpha < 0.995 ? ` at ${info.alphaPercent}% alpha` : '';
+    return `${info.hex}${alpha}.`;
+  }
+
+  if (paints.length === 1 && isGradientPaint(paints[0])) {
+    const info = getGradientPaintInfo(paints[0]);
+    return `${info.kind} gradient, ${info.name}.`;
+  }
+
+  return `${paints.length} layered fills.`;
+}
+
+function getGradientPaintInfo(paint) {
+  const kind = String(paint.type || 'GRADIENT').replace('GRADIENT_', '').toLowerCase();
+  const titleKind = titleCase(kind.replace(/_/g, ' '));
+  const stops = paint.gradientStops || [];
+  const first = stops[0] ? getColorStopName(stops[0]) : 'Start';
+  const last = stops[stops.length - 1] ? getColorStopName(stops[stops.length - 1]) : 'End';
+  return {
+    kind: titleKind,
+    name: `${first} to ${last}`,
+  };
+}
+
+function getColorStopName(stop) {
+  const color = stop.color || {};
+  const alpha = color.a === undefined ? 1 : color.a;
+  if (alpha <= 0.01) {
+    return 'Transparent';
+  }
+
+  const info = getColorInfo({
+    r: color.r || 0,
+    g: color.g || 0,
+    b: color.b || 0,
+    alpha,
+  });
+  return `${info.family} ${info.shade}`;
+}
+
+function getSolidPaintInfo(paint) {
+  const color = paint.color || {};
+  return getColorInfo({
+    r: color.r || 0,
+    g: color.g || 0,
+    b: color.b || 0,
+    alpha: getPaintAlpha(paint),
+  });
+}
+
+function getColorInfo(color) {
+  const hsl = rgbToHsl(color.r, color.g, color.b);
+  return {
+    family: getColorFamily(hsl),
+    shade: getColorShade(hsl.l),
+    hex: rgbToHex(color.r, color.g, color.b),
+    alpha: color.alpha,
+    alphaPercent: Math.round((color.alpha || 0) * 100),
+  };
+}
+
+function getColorFamily(hsl) {
+  if (hsl.s < 0.08) {
+    return 'Neutral';
+  }
+
+  const hue = hsl.h;
+  if (hue < 18 || hue >= 345) return 'Red';
+  if (hue < 38) return 'Orange';
+  if (hue < 55) return 'Gold';
+  if (hue < 70) return 'Yellow';
+  if (hue < 95) return 'Lime';
+  if (hue < 155) return 'Green';
+  if (hue < 185) return 'Teal';
+  if (hue < 205) return 'Cyan';
+  if (hue < 245) return 'Blue';
+  if (hue < 265) return 'Indigo';
+  if (hue < 285) return 'Violet';
+  if (hue < 315) return 'Purple';
+  if (hue < 345) return 'Pink';
+  return 'Neutral';
+}
+
+function getColorShade(lightness) {
+  if (lightness >= 0.97) return '0';
+  if (lightness >= 0.93) return '50';
+  if (lightness >= 0.86) return '100';
+  if (lightness >= 0.76) return '200';
+  if (lightness >= 0.66) return '300';
+  if (lightness >= 0.56) return '400';
+  if (lightness >= 0.46) return '500';
+  if (lightness >= 0.36) return '600';
+  if (lightness >= 0.28) return '700';
+  if (lightness >= 0.20) return '800';
+  if (lightness >= 0.12) return '900';
+  return '950';
+}
+
+function rgbToHsl(r, g, b) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h *= 60;
+  }
+
+  return { h, s, l };
+}
+
+function rgbToHex(r, g, b) {
+  const values = [r, g, b].map((value) => {
+    const intValue = Math.max(0, Math.min(255, Math.round(value * 255)));
+    return intValue.toString(16).padStart(2, '0');
+  });
+  return `#${values.join('').toUpperCase()}`;
+}
+
+function getPaintAlpha(paint) {
+  const color = paint && paint.color ? paint.color : {};
+  const paintOpacity = paint && paint.opacity !== undefined ? paint.opacity : 1;
+  const colorAlpha = color.a !== undefined ? color.a : 1;
+  return roundStyleNumber(paintOpacity * colorAlpha, 4);
+}
+
+function isGradientPaint(paint) {
+  return Boolean(paint && typeof paint.type === 'string' && paint.type.indexOf('GRADIENT_') === 0);
+}
+
+function isFullyTransparentPaint(paint) {
+  if (!paint || paint.visible === false) {
+    return true;
+  }
+
+  if (paint.type === 'SOLID') {
+    return getPaintAlpha(paint) <= 0.001;
+  }
+
+  if (isGradientPaint(paint)) {
+    const stops = paint.gradientStops || [];
+    if (stops.length === 0) {
+      return false;
+    }
+    return stops.every((stop) => {
+      const color = stop && stop.color ? stop.color : {};
+      return (color.a === undefined ? 1 : color.a) <= 0.001;
+    });
+  }
+
+  return false;
+}
+
+async function getLocalStylesSafe(kind) {
+  try {
+    if (kind === 'paint') {
+      if (typeof figma.getLocalPaintStylesAsync === 'function') {
+        return await figma.getLocalPaintStylesAsync();
+      }
+      if (typeof figma.getLocalPaintStyles === 'function') {
+        return figma.getLocalPaintStyles();
+      }
+    }
+
+    if (kind === 'text') {
+      if (typeof figma.getLocalTextStylesAsync === 'function') {
+        return await figma.getLocalTextStylesAsync();
+      }
+      if (typeof figma.getLocalTextStyles === 'function') {
+        return figma.getLocalTextStyles();
+      }
+    }
+  } catch (err) {}
+
+  return [];
+}
+
+function ensurePaintStyle(def, localStyles) {
+  try {
+    let style = findLocalStyleByName(localStyles, def.name);
+    if (!style) {
+      style = figma.createPaintStyle();
+      localStyles.push(style);
+    }
+
+    style.name = def.name;
+    style.paints = cloneValue(def.paints);
+    if ('description' in style) {
+      style.description = def.description;
+    }
+    return style.id;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function ensureTextStyle(def, localStyles) {
+  try {
+    await figma.loadFontAsync(def.fontName);
+
+    let style = findLocalStyleByName(localStyles, def.name);
+    if (!style) {
+      style = figma.createTextStyle();
+      localStyles.push(style);
+    }
+
+    style.name = def.name;
+    style.fontName = def.fontName;
+    style.fontSize = def.fontSize;
+    style.lineHeight = cloneValue(def.lineHeight);
+    style.letterSpacing = cloneValue(def.letterSpacing);
+    try {
+      style.textCase = def.textCase || 'ORIGINAL';
+    } catch (err) {}
+    if ('description' in style) {
+      style.description = def.description;
+    }
+    return style.id;
+  } catch (err) {
+    return null;
+  }
+}
+
+function findLocalStyleByName(styles, name) {
+  for (let index = 0; index < styles.length; index++) {
+    if (styles[index] && styles[index].name === name) {
+      return styles[index];
+    }
+  }
+  return null;
+}
+
+async function applyPaintStyleIds(node, spec, styleRegistry) {
+  if (!styleRegistry) {
+    return;
+  }
+
+  const fillStyleId = getPaintStyleIdForPaints(styleRegistry, spec.fills);
+  if (fillStyleId) {
+    await setNodeFillStyleId(node, fillStyleId);
+  }
+
+  const strokeStyleId = getPaintStyleIdForPaints(styleRegistry, spec.strokes);
+  if (strokeStyleId) {
+    await setNodeStrokeStyleId(node, strokeStyleId);
+  }
+}
+
+async function applyTextStyleIds(text, spec, runs, styleRegistry) {
+  if (!styleRegistry || !text.characters) {
+    return;
+  }
+
+  const length = text.characters.length;
+  const baseTextStyleId = getTextStyleIdForSpec(styleRegistry, spec);
+  if (baseTextStyleId) {
+    await setRangeTextStyleId(text, 0, length, baseTextStyleId);
+  }
+
+  const baseFillStyleId = getPaintStyleIdForPaints(styleRegistry, spec.fills);
+  if (baseFillStyleId) {
+    await setRangeFillStyleId(text, 0, length, baseFillStyleId);
+  }
+
+  const baseStrokeStyleId = getPaintStyleIdForPaints(styleRegistry, spec.strokes);
+  if (baseStrokeStyleId) {
+    await setRangeStrokeStyleId(text, 0, length, baseStrokeStyleId);
+  }
+
+  const textRuns = runs || [];
+  for (let index = 0; index < textRuns.length; index++) {
+    const run = textRuns[index];
+    if (!run) {
+      continue;
+    }
+
+    const start = Number.isFinite(run.start) ? run.start : 0;
+    const end = Number.isFinite(run.end) ? run.end : start + String(run.text || '').length;
+    if (end <= start) {
+      continue;
+    }
+
+    const runTextStyleId = getTextStyleIdForSpec(styleRegistry, run);
+    if (runTextStyleId) {
+      await setRangeTextStyleId(text, start, end, runTextStyleId);
+    }
+
+    const runFillStyleId = getPaintStyleIdForPaints(styleRegistry, run.fills);
+    if (runFillStyleId) {
+      await setRangeFillStyleId(text, start, end, runFillStyleId);
+    }
+
+    const runStrokeStyleId = getPaintStyleIdForPaints(styleRegistry, run.strokes);
+    if (runStrokeStyleId) {
+      await setRangeStrokeStyleId(text, start, end, runStrokeStyleId);
+    }
+  }
+}
+
+function getPaintStyleIdForPaints(styleRegistry, paints) {
+  const key = makePaintStyleKey(paints);
+  return key && styleRegistry.paint ? styleRegistry.paint[key] : null;
+}
+
+function getTextStyleIdForSpec(styleRegistry, spec) {
+  const style = normalizeTextStyleInput(spec);
+  if (!style) {
+    return null;
+  }
+  const key = makeTextStyleKey(style);
+  return styleRegistry.text ? styleRegistry.text[key] : null;
+}
+
+async function setNodeFillStyleId(node, styleId) {
+  try {
+    if (typeof node.setFillStyleIdAsync === 'function') {
+      await node.setFillStyleIdAsync(styleId);
+    } else {
+      node.fillStyleId = styleId;
+    }
+  } catch (err) {}
+}
+
+async function setNodeStrokeStyleId(node, styleId) {
+  try {
+    if (typeof node.setStrokeStyleIdAsync === 'function') {
+      await node.setStrokeStyleIdAsync(styleId);
+    } else {
+      node.strokeStyleId = styleId;
+    }
+  } catch (err) {}
+}
+
+async function setRangeTextStyleId(text, start, end, styleId) {
+  try {
+    if (start === 0 && end === text.characters.length && typeof text.setTextStyleIdAsync === 'function') {
+      await text.setTextStyleIdAsync(styleId);
+    } else if (typeof text.setRangeTextStyleIdAsync === 'function') {
+      await text.setRangeTextStyleIdAsync(start, end, styleId);
+    } else if (start === 0 && end === text.characters.length) {
+      text.textStyleId = styleId;
+    }
+  } catch (err) {}
+}
+
+async function setRangeFillStyleId(text, start, end, styleId) {
+  try {
+    if (start === 0 && end === text.characters.length && typeof text.setFillStyleIdAsync === 'function') {
+      await text.setFillStyleIdAsync(styleId);
+    } else if (typeof text.setRangeFillStyleIdAsync === 'function') {
+      await text.setRangeFillStyleIdAsync(start, end, styleId);
+    } else if (start === 0 && end === text.characters.length) {
+      text.fillStyleId = styleId;
+    }
+  } catch (err) {}
+}
+
+async function setRangeStrokeStyleId(text, start, end, styleId) {
+  try {
+    if (start === 0 && end === text.characters.length && typeof text.setStrokeStyleIdAsync === 'function') {
+      await text.setStrokeStyleIdAsync(styleId);
+    } else if (typeof text.setRangeStrokeStyleIdAsync === 'function') {
+      await text.setRangeStrokeStyleIdAsync(start, end, styleId);
+    } else if (start === 0 && end === text.characters.length) {
+      text.strokeStyleId = styleId;
+    }
+  } catch (err) {}
+}
+
+function formatLineHeight(lineHeight) {
+  if (!lineHeight || lineHeight.unit === 'AUTO') {
+    return 'auto line height';
+  }
+  return `${lineHeight.value}${lineHeight.unit === 'PIXELS' ? 'px' : '%'} line height`;
+}
+
+function formatLetterSpacing(letterSpacing) {
+  if (!letterSpacing) {
+    return '0px tracking';
+  }
+  const unit = letterSpacing.unit === 'PERCENT' ? '%' : 'px';
+  return `${letterSpacing.value}${unit} tracking`;
+}
+
+function titleCase(value) {
+  return String(value || '').replace(/\w\S*/g, (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+}
+
+function sanitizeStyleSegment(value) {
+  return String(value || 'Style')
+    .replace(/[\/\\]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || 'Style';
+}
+
+function roundStyleNumber(value, precision) {
+  const factor = Math.pow(10, precision);
+  return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
+}
+
+function shortHash(value) {
+  let hash = 0;
+  const text = String(value || '');
+  for (let index = 0; index < text.length; index++) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36).slice(0, 6);
+}
+
+function cloneValue(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+// Node builder
+
+async function buildNode(spec, parentLayoutMode, styleRegistry) {
+  if (spec.type === 'TEXT') {
+    return await buildTextNode(spec, styleRegistry);
+  }
+  return buildFrameNode(spec, parentLayoutMode, styleRegistry);
+}
+
+async function buildTextNode(spec, styleRegistry) {
   const textRuns = getAlignedTextRuns(spec);
 
   if (hasOutlineRuns(textRuns)) {
-    return buildMixedTextGroup(spec);
+    return await buildMixedTextGroup(spec, styleRegistry);
   }
 
   const text = figma.createText();
   applyBaseTextProps(text, spec);
   applyTextRunStyles(text, textRuns);
+  await applyTextStyleIds(text, spec, textRuns, styleRegistry);
   applyTextSizing(text, spec);
   return text;
 }
 
-function buildMixedTextGroup(spec) {
+async function buildMixedTextGroup(spec, styleRegistry) {
   const textRuns = getAlignedTextRuns(spec);
   const frame = figma.createFrame();
   frame.name = spec.name;
@@ -340,6 +1176,7 @@ function buildMixedTextGroup(spec) {
   const baseText = figma.createText();
   applyBaseTextProps(baseText, Object.assign({}, spec, { x: 0, y: 0 }));
   applyTextRunStyles(baseText, textRuns);
+  await applyTextStyleIds(baseText, Object.assign({}, spec, { x: 0, y: 0 }), textRuns, styleRegistry);
   applyTextSizing(baseText, Object.assign({}, spec, { x: 0, y: 0 }));
   frame.appendChild(baseText);
 
@@ -364,6 +1201,24 @@ function buildMixedTextGroup(spec) {
       strokeWeight: run.strokeWeight || 1,
       opacity: spec.opacity,
     });
+    await applyTextStyleIds(overlay, {
+      name: spec.name + ' / outline',
+      characters: run.text,
+      x: 0,
+      y: estimateRunYOffset(spec, run),
+      width: spec.width,
+      height: spec.height,
+      fontName: run.fontName || spec.fontName,
+      fontSize: run.fontSize || spec.fontSize,
+      lineHeight: run.lineHeight || spec.lineHeight,
+      letterSpacing: run.letterSpacing || spec.letterSpacing,
+      textAlignHorizontal: spec.textAlignHorizontal,
+      textCase: run.textCase || spec.textCase,
+      fills: run.fills || [],
+      strokes: run.strokes || [],
+      strokeWeight: run.strokeWeight || 1,
+      opacity: spec.opacity,
+    }, [], styleRegistry);
     applyTextSizing(overlay, { width: spec.width, height: spec.height });
     frame.appendChild(overlay);
   }
@@ -432,7 +1287,7 @@ function applyTextSizing(text, spec) {
   } catch (err) {}
 }
 
-async function buildFrameNode(spec, parentLayoutMode) {
+async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
   const frame = figma.createFrame();
   frame.name = spec.name;
   frame.resize(Math.max(spec.width || 100, 1), Math.max(spec.height || 100, 1));
@@ -483,9 +1338,11 @@ async function buildFrameNode(spec, parentLayoutMode) {
     applyBackgroundPattern(frame, spec._backgroundPattern);
   }
 
+  await applyPaintStyleIds(frame, spec, styleRegistry);
+
   const childSpecs = getPreparedChildSpecs(spec);
   for (const childSpec of childSpecs) {
-    const child = await buildNode(childSpec, frame.layoutMode || 'NONE');
+    const child = await buildNode(childSpec, frame.layoutMode || 'NONE', styleRegistry);
     if (child) {
       frame.appendChild(child);
       if (childSpec.layoutPositioning === 'ABSOLUTE' && frame.layoutMode !== 'NONE') {
