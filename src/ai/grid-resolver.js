@@ -8,7 +8,7 @@
  */
 
 import { findGridNodes } from '../core/dom-tree.js';
-import { createMessageWithFallback } from './client.js';
+import { createMessageWithFallback, getResponseText, parseJsonPayload } from './client.js';
 
 /**
  * @param {string} rawCSS - all CSS from the page
@@ -29,15 +29,15 @@ export async function resolveGridLayouts(rawCSS, domTree) {
     .join('\n\n');
 
   const response = await createMessageWithFallback({
-    max_tokens: 1500,
+    max_tokens: 900,
     messages: [
       {
         role: 'user',
-        content: `You are a Figma layout expert. Convert these CSS grid layouts into Figma Auto Layout frame structures.
+        content: `You are a Figma layout expert. Convert these CSS grid layouts into the smallest useful Figma Auto Layout summary.
 
 ${patternsText}
 
-For each pattern, return the optimal Figma Auto Layout nesting strategy.
+For each pattern, return only the outer frame strategy we need.
 Respond ONLY with a JSON array, no markdown, no explanation:
 [
   {
@@ -47,17 +47,7 @@ Respond ONLY with a JSON array, no markdown, no explanation:
       "layoutMode": "HORIZONTAL" | "VERTICAL",
       "primaryAxisSizingMode": "FIXED" | "HUG",
       "counterAxisSizingMode": "FIXED" | "HUG",
-      "itemSpacing": number,
-      "children": [
-        {
-          "name": "column/cell name",
-          "layoutMode": "HORIZONTAL" | "VERTICAL" | "NONE",
-          "layoutGrow": number,
-          "layoutSizingHorizontal": "FILL" | "HUG" | "FIXED",
-          "layoutSizingVertical": "FILL" | "HUG" | "FIXED",
-          "children": "PASS_THROUGH"
-        }
-      ]
+      "itemSpacing": number
     },
     "notes": "brief explanation of the strategy"
   }
@@ -66,9 +56,9 @@ Respond ONLY with a JSON array, no markdown, no explanation:
     ],
   });
 
-  const text = response.content[0].text.trim();
+  const text = getResponseText(response);
   try {
-    const strategies = extractJsonArray(text);
+    const strategies = normalizeGridStrategies(parseJsonPayload(text), uniquePatterns);
 
     // Index by selectorHint for easy lookup
     const map = {};
@@ -82,16 +72,22 @@ Respond ONLY with a JSON array, no markdown, no explanation:
   }
 }
 
-function extractJsonArray(text) {
-  // Strip markdown code fences
-  const stripped = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
-  // Find the outermost JSON array boundaries
-  const start = stripped.indexOf('[');
-  const end = stripped.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('No JSON array found in response');
-  }
-  return JSON.parse(stripped.slice(start, end + 1));
+function normalizeGridStrategies(strategies, patterns) {
+  return (Array.isArray(strategies) ? strategies : []).map((strategy, index) => {
+    const fallbackSelector = `.${patterns[index]?.classList?.[0] ?? 'unknown'}`;
+    const outerFrame = strategy.outerFrame || strategy.figma_structure || strategy.frame || {};
+    return {
+      patternIndex: strategy.patternIndex || strategy.pattern || index + 1,
+      selectorHint: strategy.selectorHint || strategy.selector || fallbackSelector,
+      outerFrame: {
+        layoutMode: outerFrame.layoutMode || 'HORIZONTAL',
+        primaryAxisSizingMode: outerFrame.primaryAxisSizingMode || 'FIXED',
+        counterAxisSizingMode: outerFrame.counterAxisSizingMode || 'FIXED',
+        itemSpacing: outerFrame.itemSpacing || 0,
+      },
+      notes: strategy.notes || strategy.rationale || '',
+    };
+  });
 }
 
 function deduplicateGridPatterns(gridNodes) {

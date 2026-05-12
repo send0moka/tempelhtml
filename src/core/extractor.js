@@ -153,20 +153,22 @@ function walkDOMInBrowser() {
     if (rect.width === 0 && rect.height === 0 && cs.position === 'static') return null;
 
     const rawText = normalizeTextContent(el.innerText || el.textContent || '');
-    const onlyInlineChildren = Array.from(el.children).every(child => {
-      const childTag = child.tagName.toLowerCase();
-      if (INLINE_TAGS.has(childTag)) return true;
-      const childDisplay = window.getComputedStyle(child).display;
-      return childDisplay.startsWith('inline');
-    });
-    const hasLayoutDisplay = cs.display === 'flex' || cs.display === 'inline-flex' || cs.display === 'grid';
-    const isTextContainer = Boolean(rawText) && !hasLayoutDisplay && (
+    const hasVisualBox =
+      !isTransparentColor(cs.backgroundColor) ||
+      cs.backgroundImage !== 'none' ||
+      cs.borderStyle !== 'none' ||
+      parseFloat(cs.borderTopWidth) > 0 ||
+      parseFloat(cs.paddingTop) > 0 ||
+      parseFloat(cs.paddingRight) > 0 ||
+      parseFloat(cs.paddingBottom) > 0 ||
+      parseFloat(cs.paddingLeft) > 0 ||
+      cs.boxShadow !== 'none';
+    const isTextContainer = Boolean(rawText) && !hasVisualBox && (
       TEXT_TAGS.has(tag) ||
-      el.children.length === 0 ||
-      onlyInlineChildren
+      el.children.length === 0
     );
 
-    const textData = isTextContainer ? extractTextData(el) : null;
+    const textData = rawText ? extractTextData(el) : null;
 
     const children = isTextContainer
       ? []
@@ -178,8 +180,8 @@ function walkDOMInBrowser() {
       tag,
       id: el.id || null,
       classList: Array.from(el.classList),
-      text: isTextContainer ? (textData?.text || rawText) : null,
-      textRuns: isTextContainer ? (textData?.runs || []) : [],
+      text: rawText || null,
+      textRuns: textData?.runs || [],
       isTextContainer,
       rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       computed: extractRelevantStyles(cs),
@@ -348,15 +350,19 @@ function walkDOMInBrowser() {
       .replace(/\s+/g, ' ');
   }
 
-  function normalizeTextContent(value) {
-    return String(value || '')
-      .replace(/\r/g, '')
-      .replace(/\u00a0/g, ' ')
-      .replace(/[ \t]+\n/g, '\n')
-      .replace(/\n[ \t]+/g, '\n')
-      .replace(/[ \t]{2,}/g, ' ')
-      .trim();
-  }
+function normalizeTextContent(value) {
+  return String(value || '')
+    .replace(/\r/g, '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function isTransparentColor(value) {
+  return !value || value === 'transparent' || value === 'none' || value === 'rgba(0, 0, 0, 0)';
+}
 
   return getNode(document.body);
 }

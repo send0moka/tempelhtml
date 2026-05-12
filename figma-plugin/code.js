@@ -24,7 +24,7 @@ figma.ui.onmessage = async (msg) => {
 };
 
 async function convertAndBuild(payload) {
-  progress('Starting conversion job...', 2);
+  progress('Uploading HTML to local server...', 1);
 
   const response = await fetch(getJobStartUrl(payload.serverUrl || DEFAULT_CONVERTER_URL), {
     method: 'POST',
@@ -52,6 +52,7 @@ async function convertAndBuild(payload) {
     throw new Error('Conversion server did not return a job id.');
   }
 
+  progress('Job queued. Rendering page...', 3);
   const result = await waitForJob(payload.serverUrl || DEFAULT_CONVERTER_URL, started.jobId);
   await buildFromSnapshot(result);
 }
@@ -303,6 +304,9 @@ async function buildFrameNode(spec, parentLayoutMode) {
       frame.blendMode = spec.blendMode;
     } catch (err) {}
   }
+  if (spec._backgroundPattern) {
+    applyBackgroundPattern(frame, spec._backgroundPattern);
+  }
 
   for (const childSpec of (spec.children || [])) {
     const child = await buildNode(childSpec, frame.layoutMode || 'NONE');
@@ -349,6 +353,50 @@ function buildComponentWithVariants(defaultFrame, hoverSpec) {
   } catch (err) {
     return defaultFrame;
   }
+}
+
+function applyBackgroundPattern(frame, pattern) {
+  if (!pattern || pattern.kind !== 'grid') {
+    return;
+  }
+
+  const layer = figma.createFrame();
+  layer.name = `${frame.name} / pattern`;
+  layer.x = 0;
+  layer.y = 0;
+  layer.resize(frame.width, frame.height);
+  layer.fills = [];
+  layer.strokes = [];
+  layer.clipsContent = true;
+
+  const cellWidth = Math.max(pattern.cellWidth || 1, 1);
+  const cellHeight = Math.max(pattern.cellHeight || 1, 1);
+  const strokeWeight = Math.max(pattern.strokeWeight || 1, 1);
+  const paint = pattern.paint ? [pattern.paint] : [];
+
+  for (let x = 0; x < frame.width; x += cellWidth) {
+    const line = figma.createFrame();
+    line.name = 'grid-v';
+    line.x = x;
+    line.y = 0;
+    line.resize(strokeWeight, frame.height);
+    line.fills = paint;
+    line.strokes = [];
+    layer.appendChild(line);
+  }
+
+  for (let y = 0; y < frame.height; y += cellHeight) {
+    const line = figma.createFrame();
+    line.name = 'grid-h';
+    line.x = 0;
+    line.y = y;
+    line.resize(frame.width, strokeWeight);
+    line.fills = paint;
+    line.strokes = [];
+    layer.appendChild(line);
+  }
+
+  frame.appendChild(layer);
 }
 
 function layoutTopLevelNodes(page) {

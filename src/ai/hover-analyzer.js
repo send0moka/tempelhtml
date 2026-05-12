@@ -4,7 +4,7 @@
  * then uses LLM to generate Figma Component Variant specs.
  */
 
-import { createMessageWithFallback } from './client.js';
+import { createMessageWithFallback, getResponseText, parseJsonPayload } from './client.js';
 
 /**
  * @param {string} rawCSS - full CSS text from the page
@@ -17,64 +17,33 @@ export async function analyzeHoverStates(rawCSS) {
   if (interactiveRules.length === 0) return {};
 
   const response = await createMessageWithFallback({
-    max_tokens: 2000,
+    max_tokens: 800,
     messages: [
       {
         role: 'user',
-        content: `You are a Figma design system expert. Analyze these CSS interactive states and generate Figma Component Variant specifications.
+        content: `You are a Figma design system expert. Analyze these CSS interactive states and identify which selectors should become named Figma components.
 
 CSS Rules:
 ${interactiveRules.join('\n\n')}
 
-For each interactive element, return a JSON array (no markdown, no explanation):
+Return only a compact JSON array (no markdown, no explanation):
 [
   {
     "selector": ".btn-primary",
     "componentName": "Button/Primary",
-    "variants": [
-      {
-        "name": "State=Default",
-        "properties": {
-          "fills": [{"type": "SOLID", "hex": "#c9a84c"}],
-          "strokes": [],
-          "opacity": 1,
-          "cornerRadius": 0,
-          "effects": []
-        }
-      },
-      {
-        "name": "State=Hover",
-        "properties": {
-          "fills": [{"type": "SOLID", "hex": "#e8c97a"}],
-          "strokes": [],
-          "opacity": 1,
-          "cornerRadius": 0,
-          "effects": [],
-          "transform": {"translateY": -2}
-        }
-      }
-    ],
-    "transition": {
-      "durationMs": 300,
-      "easing": "ease-out"
-    },
-    "figmaPrototype": {
-      "trigger": "MOUSE_ENTER",
-      "action": "CHANGE_TO",
-      "animation": "SMART_ANIMATE"
-    }
+    "notes": "short summary"
   }
 ]
 
-Focus on: background changes, color changes, border changes, opacity changes, transform (translateY/scale), box-shadow changes.
-Ignore: animation keyframes (those are not hover states).`,
+Focus on selectors that clearly represent reusable interactive UI.
+Ignore animation keyframes and do not invent nested structures.`,
       },
     ],
   });
 
-  const text = response.content[0].text.trim();
+  const text = getResponseText(response);
   try {
-    const specs = extractJsonArray(text);
+    const specs = parseJsonPayload(text);
     const map = {};
     for (const spec of specs) {
       map[spec.selector] = spec;
@@ -84,18 +53,6 @@ Ignore: animation keyframes (those are not hover states).`,
     console.warn('[hover-analyzer] Failed to parse AI response. Raw:', text.slice(0, 200));
     return {};
   }
-}
-
-function extractJsonArray(text) {
-  // Strip markdown code fences
-  const stripped = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
-  // Find the outermost JSON array boundaries
-  const start = stripped.indexOf('[');
-  const end = stripped.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('No JSON array found in response');
-  }
-  return JSON.parse(stripped.slice(start, end + 1));
 }
 
 /**
@@ -112,8 +69,7 @@ function extractInteractiveRules(rawCSS) {
     const open = (line.match(/{/g) || []).length;
     const close = (line.match(/}/g) || []).length;
 
-    if (depth === 0 && (line.includes(':hover') || line.includes(':focus') ||
-        line.includes(':active') || line.includes('transition'))) {
+    if (depth === 0 && (line.includes(':hover') || line.includes(':focus') || line.includes(':active'))) {
       isInteractive = true;
     }
 

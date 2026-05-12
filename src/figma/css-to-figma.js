@@ -65,11 +65,11 @@ export function mapOverflow(computed) {
 /**
  * border-radius → Figma cornerRadius
  */
-export function mapBorderRadius(computed) {
-  const tl = parsePx(computed.borderTopLeftRadius);
-  const tr = parsePx(computed.borderTopRightRadius);
-  const br = parsePx(computed.borderBottomRightRadius);
-  const bl = parsePx(computed.borderBottomLeftRadius);
+export function mapBorderRadius(computed, rect = { width: 0, height: 0 }) {
+  const tl = parseRadiusValue(computed.borderTopLeftRadius, rect);
+  const tr = parseRadiusValue(computed.borderTopRightRadius, rect);
+  const br = parseRadiusValue(computed.borderBottomRightRadius, rect);
+  const bl = parseRadiusValue(computed.borderBottomLeftRadius, rect);
 
   if (tl === tr && tr === br && br === bl) {
     return { cornerRadius: tl };
@@ -80,6 +80,17 @@ export function mapBorderRadius(computed) {
     bottomRightRadius: br,
     bottomLeftRadius: bl,
   };
+}
+
+function parseRadiusValue(value, rect) {
+  if (!value || value === 'none' || value === 'auto') return 0;
+  if (typeof value === 'string' && value.endsWith('%')) {
+    const percent = parseFloat(value);
+    if (Number.isFinite(percent)) {
+      return (Math.min(rect.width || 0, rect.height || 0) * percent) / 100;
+    }
+  }
+  return parsePx(value);
 }
 
 // ─── VISUAL / FILLS ───────────────────────────────────────────────────────────

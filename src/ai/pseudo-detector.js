@@ -7,7 +7,7 @@
  * that can be used to create manual Figma frames.
  */
 
-import { createMessageWithFallback } from './client.js';
+import { createMessageWithFallback, getResponseText, parseJsonPayload } from './client.js';
 
 /**
  * @param {Buffer} withPseudo    - screenshot with pseudo-elements visible
@@ -59,10 +59,9 @@ If no differences found, return an empty array [].`,
     ],
   });
 
-  const text = response.content[0].text.trim();
+  const text = getResponseText(response);
   try {
-    const clean = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(clean);
+    return parseJsonPayload(text);
   } catch {
     console.warn('[pseudo-detector] Failed to parse AI response, returning empty array.');
     console.warn('[pseudo-detector] Raw response:', text.slice(0, 200));

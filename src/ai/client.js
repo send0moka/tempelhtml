@@ -35,3 +35,37 @@ function isMissingModelError(error) {
   const message = String(error && error.message ? error.message : error);
   return message.includes('not_found_error') || message.includes('model:');
 }
+
+export function getResponseText(response) {
+  return (response && response.content ? response.content : [])
+    .filter((item) => item && item.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join('\n')
+    .trim();
+}
+
+export function parseJsonPayload(text) {
+  const raw = String(text || '').trim();
+  if (!raw) {
+    throw new Error('Model returned an empty response.');
+  }
+
+  const clean = raw.replace(/```json|```/gi, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch {}
+
+  const arrayStart = clean.indexOf('[');
+  const arrayEnd = clean.lastIndexOf(']');
+  if (arrayStart >= 0 && arrayEnd > arrayStart) {
+    return JSON.parse(clean.slice(arrayStart, arrayEnd + 1));
+  }
+
+  const objectStart = clean.indexOf('{');
+  const objectEnd = clean.lastIndexOf('}');
+  if (objectStart >= 0 && objectEnd > objectStart) {
+    return JSON.parse(clean.slice(objectStart, objectEnd + 1));
+  }
+
+  throw new Error('Model response did not contain valid JSON.');
+}
