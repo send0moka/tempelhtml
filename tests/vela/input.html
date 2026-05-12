@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VELA — Creative Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0c0a;
+      --surface: #151410;
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --cream: #f0ebe0;
+      --muted: #5a5648;
+      --text: #d6cfc0;
+      --white: #faf8f3;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+
+    /* GRAIN OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 28px 60px;
+      mix-blend-mode: normal;
+    }
+
+    nav::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(13,12,10,0.95) 0%, transparent 100%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 40px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    .nav-links a:hover { color: var(--cream); }
+
+    .nav-cta {
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 10px 22px;
+      transition: background 0.3s, color 0.3s !important;
+    }
+    .nav-cta:hover {
+      background: var(--gold) !important;
+      color: var(--bg) !important;
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 160px 60px 80px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-label {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+
+    .hero-label::before {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: var(--gold);
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(56px, 6vw, 88px);
+      font-weight: 900;
+      line-height: 0.95;
+      color: var(--white);
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.4s forwards;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold-light);
+    }
+
+    .hero-title .outline {
+      -webkit-text-stroke: 1px var(--muted);
+      color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 360px;
+      margin: 36px 0 48px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.6s forwards;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.8s forwards;
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--bg);
+      padding: 16px 36px;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.3s, transform 0.2s;
+    }
+    .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+
+    .btn-ghost {
+      color: var(--cream);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: gap 0.3s;
+    }
+    .btn-ghost:hover { gap: 16px; }
+    .btn-ghost span { font-size: 18px; }
+
+    .hero-right {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-img-wrap {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      animation: fadeIn 1.2s 0.3s forwards;
+    }
+
+    .hero-img-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--bg) 0%, transparent 30%),
+                  linear-gradient(to bottom, transparent 60%, var(--bg) 100%);
+    }
+
+    /* Placeholder art using CSS */
+    .hero-visual {
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse 60% 70% at 60% 40%, #c9a84c18 0%, transparent 70%),
+        radial-gradient(ellipse 40% 50% at 80% 70%, #8b6d2a10 0%, transparent 60%),
+        linear-gradient(135deg, #1a1710 0%, #0d0c0a 100%);
+      position: relative;
+    }
+
+    .hero-visual-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.06) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridShift 20s linear infinite;
+    }
+
+    @keyframes gridShift {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(60px); }
+    }
+
+    .hero-circle {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(201,168,76,0.15);
+    }
+    .hero-circle.c1 { width: 400px; height: 400px; top: 10%; left: 10%; animation: spin 30s linear infinite; }
+    .hero-circle.c2 { width: 250px; height: 250px; top: 35%; left: 30%; animation: spin 20s linear infinite reverse; border-color: rgba(201,168,76,0.25); }
+    .hero-circle.c3 { width: 600px; height: 600px; top: -10%; left: -5%; animation: spin 50s linear infinite; border-color: rgba(201,168,76,0.07); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hero-dot {
+      position: absolute;
+      width: 8px; height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      top: 40%; left: 55%;
+      box-shadow: 0 0 30px 10px rgba(201,168,76,0.3);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    /* MARQUEE */
+    .marquee-wrap {
+      overflow: hidden;
+      border-top: 1px solid #1e1c17;
+      border-bottom: 1px solid #1e1c17;
+      padding: 18px 0;
+      background: var(--surface);
+    }
+
+    .marquee-track {
+      display: flex;
+      gap: 60px;
+      animation: marquee 18s linear infinite;
+      white-space: nowrap;
+    }
+
+    .marquee-item {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+    .marquee-item::after {
+      content: '✦';
+      color: var(--gold);
+      font-size: 10px;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* STATS */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid #1e1c17;
+    }
+
+    .stat {
+      padding: 60px 50px;
+      border-right: 1px solid #1e1c17;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.4s;
+    }
+    .stat:last-child { border-right: none; }
+    .stat:hover { background: #131210; }
+
+    .stat-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 52px;
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-number em { color: var(--gold); font-style: normal; }
+
+    .stat-label {
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* WORK / SERVICES */
+    .section {
+      padding: 120px 60px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 72px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-label::before { content: ''; width: 30px; height: 1px; background: var(--gold); }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 4vw, 56px);
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.1;
+    }
+    .section-title em { font-style: italic; color: var(--gold-light); }
+
+    .view-all {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.3s, gap 0.3s;
+      flex-shrink: 0;
+    }
+    .view-all:hover { color: var(--cream); gap: 14px; }
+
+    /* SERVICE CARDS */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+
+    .service-card {
+      background: var(--surface);
+      padding: 52px 44px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.4s;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: border-color 0.4s, background 0.4s;
+    }
+    .service-card:hover { background: #171510; border-color: rgba(201,168,76,0.2); }
+
+    .service-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      margin-bottom: 36px;
+    }
+
+    .service-icon {
+      width: 44px;
+      height: 44px;
+      margin-bottom: 28px;
+      opacity: 0.6;
+    }
+
+    .service-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+
+    .service-desc {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .service-arrow {
+      position: absolute;
+      bottom: 40px;
+      right: 44px;
+      color: var(--gold);
+      font-size: 20px;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .service-card:hover .service-arrow { opacity: 1; transform: translateX(0); }
+
+    /* FEATURED WORK */
+    .work-section {
+      padding: 0 60px 120px;
+    }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 3px;
+    }
+
+    .work-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .work-card.large { grid-row: span 2; }
+
+    .work-visual {
+      width: 100%;
+      padding-bottom: 65%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .work-card.large .work-visual { padding-bottom: 100%; }
+
+    .work-bg {
+      position: absolute;
+      inset: 0;
+      transition: transform 0.6s ease;
+    }
+    .work-card:hover .work-bg { transform: scale(1.04); }
+
+    .work-bg-1 { background: linear-gradient(135deg, #1a2a1a 0%, #0e1a0e 50%, #0d0c0a 100%); }
+    .work-bg-2 { background: linear-gradient(135deg, #1a1520 0%, #100d18 50%, #0d0c0a 100%); }
+    .work-bg-3 { background: linear-gradient(135deg, #201510 0%, #180e08 50%, #0d0c0a 100%); }
+
+    .work-accent {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 120px;
+      opacity: 0.04;
+      color: var(--white);
+      letter-spacing: 0.05em;
+    }
+
+    .work-info {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 30px 36px;
+      background: linear-gradient(to top, rgba(13,12,10,0.9) 0%, transparent 100%);
+      transform: translateY(10px);
+      opacity: 0;
+      transition: all 0.4s;
+    }
+    .work-card:hover .work-info { opacity: 1; transform: translateY(0); }
+
+    .work-tag {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .work-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: var(--white);
+    }
+
+    /* TESTIMONIAL */
+    .testimonial-section {
+      padding: 100px 60px;
+      background: var(--surface);
+      border-top: 1px solid #1e1c17;
+      border-bottom: 1px solid #1e1c17;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .testimonial-section::before {
+      content: '"';
+      position: absolute;
+      top: -40px; left: 40px;
+      font-family: 'Playfair Display', serif;
+      font-size: 400px;
+      color: rgba(201,168,76,0.04);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .testimonial-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .testimonial-stars {
+      color: var(--gold);
+      font-size: 14px;
+      letter-spacing: 4px;
+      margin-bottom: 36px;
+    }
+
+    .testimonial-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(22px, 3vw, 34px);
+      font-style: italic;
+      color: var(--cream);
+      line-height: 1.5;
+      margin-bottom: 44px;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .author-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #8b6d2a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      color: var(--bg);
+    }
+
+    .author-info { text-align: left; }
+    .author-name { font-size: 14px; color: var(--white); font-weight: 500; }
+    .author-role { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
+
+    /* CTA */
+    .cta-section {
+      padding: 140px 60px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .cta-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(40px, 5vw, 68px);
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1.0;
+    }
+    .cta-title em { font-style: italic; color: var(--gold-light); }
+
+    .cta-right { display: flex; flex-direction: column; gap: 32px; }
+    .cta-desc { font-size: 15px; line-height: 1.8; color: var(--muted); }
+
+    .cta-form {
+      display: flex;
+      gap: 0;
+      border: 1px solid #2a2820;
+    }
+
+    .cta-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 16px 20px;
+      color: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+    .cta-input::placeholder { color: var(--muted); }
+
+    .cta-btn {
+      background: var(--gold);
+      border: none;
+      padding: 16px 28px;
+      color: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .cta-btn:hover { background: var(--gold-light); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid #1e1c17;
+      padding: 60px;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 60px;
+    }
+
+    .footer-brand .logo { display: block; margin-bottom: 16px; }
+    .footer-tagline { font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 220px; }
+
+    .footer-col h4 {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--cream);
+      margin-bottom: 24px;
+    }
+
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .footer-col ul a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+    }
+    .footer-col ul a:hover { color: var(--cream); }
+
+    .footer-bottom {
+      border-top: 1px solid #1e1c17;
+      padding: 24px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-copy { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+
+    .footer-socials {
+      display: flex;
+      gap: 24px;
+    }
+    .footer-socials a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    .footer-socials a:hover { color: var(--gold); }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      nav { padding: 22px 28px; }
+      .nav-links { display: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-left { padding: 120px 28px 60px; }
+      .hero-right { display: none; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat { border-right: none; border-bottom: 1px solid #1e1c17; }
+      .section, .work-section { padding: 80px 28px; }
+      .services-grid { grid-template-columns: 1fr; gap: 2px; }
+      .work-grid { grid-template-columns: 1fr; }
+      .work-card.large { grid-row: span 1; }
+      .cta-section { grid-template-columns: 1fr; padding: 80px 28px; }
+      footer { grid-template-columns: 1fr 1fr; padding: 40px 28px; }
+      .footer-bottom { padding: 20px 28px; flex-direction: column; gap: 12px; }
+      .testimonial-section { padding: 80px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="logo">VELA</a>
+    <ul class="nav-links">
+      <li><a href="#">Layanan</a></li>
+      <li><a href="#">Portofolio</a></li>
+      <li><a href="#">Studio</a></li>
+      <li><a href="#" class="nav-cta">Mulai Proyek</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <p class="hero-label">Creative Studio Jakarta</p>
+      <h1 class="hero-title">
+        Kami Rancang<br>
+        <em>Hal-hal</em><br>
+        <span class="outline">Luar Biasa</span>
+      </h1>
+      <p class="hero-sub">
+        Dari strategi merek hingga pengalaman digital — kami mengubah
+        gagasan berani menjadi karya yang tak terlupakan.
+      </p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary">Lihat Portofolio</a>
+        <a href="#" class="btn-ghost">Kenali Kami <span>→</span></a>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-img-wrap">
+        <div class="hero-visual">
+          <div class="hero-visual-grid"></div>
+          <div class="hero-circle c3"></div>
+          <div class="hero-circle c1"></div>
+          <div class="hero-circle c2"></div>
+          <div class="hero-dot"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span class="marquee-item">Branding</span>
+      <span class="marquee-item">Web Design</span>
+      <span class="marquee-item">Motion Graphics</span>
+      <span class="marquee-item">UI/UX Design</span>
+      <span class="marquee-item">Strategi Kreatif</span>
+      <span class="marquee-item">Identitas Visual</span>
+      <span class="marquee-item">Campaign Digital</span>
+      <span class="marquee-item">Branding</span>
+      <span class="marquee-item">Web Design</span>
+      <span class="marquee-item">Motion Graphics</span>
+      <span class="marquee-item">UI/UX Design</span>
+      <span class="marquee-item">Strategi Kreatif</span>
+      <span class="marquee-item">Identitas Visual</span>
+      <span class="marquee-item">Campaign Digital</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat reveal">
+      <div class="stat-number">12<em>+</em></div>
+      <div class="stat-label">Tahun Pengalaman</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-number">340<em>+</em></div>
+      <div class="stat-label">Proyek Selesai</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-number">98<em>%</em></div>
+      <div class="stat-label">Klien Puas</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-number">24<em>×</em></div>
+      <div class="stat-label">Penghargaan Industri</div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section class="section">
+    <div class="section-header reveal">
+      <div>
+        <p class="section-label">Yang Kami Lakukan</p>
+        <h2 class="section-title">Layanan<br><em>Unggulan</em></h2>
+      </div>
+      <a href="#" class="view-all">Semua Layanan →</a>
+    </div>
+    <div class="services-grid">
+      <div class="service-card reveal">
+        <div class="service-num">01</div>
+        <svg class="service-icon" viewBox="0 0 44 44" fill="none">
+          <rect x="4" y="4" width="36" height="36" stroke="#c9a84c" stroke-width="1.5"/>
+          <path d="M14 22h16M22 14v16" stroke="#c9a84c" stroke-width="1.5"/>
+        </svg>
+        <div class="service-name">Brand Identity</div>
+        <div class="service-desc">Logo, panduan merek, dan sistem visual yang membuat bisnis Anda dikenal dan diingat.</div>
+        <div class="service-arrow">↗</div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-num">02</div>
+        <svg class="service-icon" viewBox="0 0 44 44" fill="none">
+          <rect x="4" y="8" width="36" height="28" rx="2" stroke="#c9a84c" stroke-width="1.5"/>
+          <path d="M4 14h36" stroke="#c9a84c" stroke-width="1.5"/>
+          <circle cx="9" cy="11" r="1.5" fill="#c9a84c"/>
+          <circle cx="15" cy="11" r="1.5" fill="#c9a84c"/>
+        </svg>
+        <div class="service-name">Web & Digital</div>
+        <div class="service-desc">Website berkelas, aplikasi web, dan pengalaman digital yang mengkonversi pengunjung menjadi pelanggan.</div>
+        <div class="service-arrow">↗</div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-num">03</div>
+        <svg class="service-icon" viewBox="0 0 44 44" fill="none">
+          <path d="M8 36L22 8l14 28" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M13 26h18" stroke="#c9a84c" stroke-width="1.5"/>
+        </svg>
+        <div class="service-name">Motion & Video</div>
+        <div class="service-desc">Animasi, video produk, dan konten gerak yang menceritakan kisah merek Anda secara memukau.</div>
+        <div class="service-arrow">↗</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORK -->
+  <div class="work-section">
+    <div class="section-header reveal">
+      <div>
+        <p class="section-label">Karya Pilihan</p>
+        <h2 class="section-title">Portofolio<br><em>Terbaru</em></h2>
+      </div>
+      <a href="#" class="view-all">Semua Karya →</a>
+    </div>
+    <div class="work-grid reveal">
+      <div class="work-card large">
+        <div class="work-visual">
+          <div class="work-bg work-bg-1">
+            <div class="work-accent">NOVA</div>
+          </div>
+          <div class="work-info">
+            <div class="work-tag">Brand Identity</div>
+            <div class="work-title">Nova Hospitality Group</div>
+          </div>
+        </div>
+      </div>
+      <div class="work-card">
+        <div class="work-visual">
+          <div class="work-bg work-bg-2">
+            <div class="work-accent">FORM</div>
+          </div>
+          <div class="work-info">
+            <div class="work-tag">Web Design</div>
+            <div class="work-title">Forma Architecture</div>
+          </div>
+        </div>
+      </div>
+      <div class="work-card">
+        <div class="work-visual">
+          <div class="work-bg work-bg-3">
+            <div class="work-accent">SAVI</div>
+          </div>
+          <div class="work-info">
+            <div class="work-tag">Motion</div>
+            <div class="work-title">Savira Skincare Launch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTIMONIAL -->
+  <section class="testimonial-section">
+    <div class="testimonial-inner reveal">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">
+        "VELA benar-benar memahami visi kami. Mereka tidak hanya mendesain — mereka membangun narasi visual yang hidup dan beresonansi dengan audiens kami."
+      </p>
+      <div class="testimonial-author">
+        <div class="author-avatar">AR</div>
+        <div class="author-info">
+          <div class="author-name">Anisa Rahma</div>
+          <div class="author-role">CEO, Nusantara Collective</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="reveal">
+      <h2 class="cta-title">Siap Mulai<br><em>Bersama</em><br>Kami?</h2>
+    </div>
+    <div class="cta-right reveal">
+      <p class="cta-desc">
+        Ceritakan proyek Anda. Kami menggabungkan keahlian strategis dengan eksekusi kreatif untuk menghasilkan karya yang melampaui ekspektasi.
+      </p>
+      <div class="cta-form">
+        <input type="email" class="cta-input" placeholder="email@perusahaan.com" />
+        <button class="cta-btn">Hubungi →</button>
+      </div>
+      <p style="font-size:12px; color: var(--muted);">Respon dalam 24 jam. Tanpa komitmen awal.</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-brand">
+      <a href="#" class="logo">VELA</a>
+      <p class="footer-tagline">Studio kreatif dengan pendekatan editorial dan eksekusi tanpa kompromi.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Layanan</h4>
+      <ul>
+        <li><a href="#">Brand Identity</a></li>
+        <li><a href="#">Web Design</a></li>
+        <li><a href="#">Motion</a></li>
+        <li><a href="#">Konsultasi</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Studio</h4>
+      <ul>
+        <li><a href="#">Tentang Kami</a></li>
+        <li><a href="#">Tim</a></li>
+        <li><a href="#">Karir</a></li>
+        <li><a href="#">Blog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Kontak</h4>
+      <ul>
+        <li><a href="#">halo@vela.studio</a></li>
+        <li><a href="#">Jakarta, Indonesia</a></li>
+        <li><a href="#">+62 812 0000 0000</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <div class="footer-bottom">
+    <p class="footer-copy">© 2026 VELA Studio. Hak Cipta Dilindungi.</p>
+    <div class="footer-socials">
+      <a href="#">Instagram</a>
+      <a href="#">Behance</a>
+      <a href="#">LinkedIn</a>
+    </div>
+  </div>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
