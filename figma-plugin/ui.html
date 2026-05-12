@@ -5,12 +5,25 @@
     :root {
       color-scheme: light;
       --bg: #f5f1e8;
+      --bg-top: #fbf7ef;
       --panel: #fffaf2;
       --ink: #1f1b16;
       --muted: #6f665d;
       --line: #e6dccd;
       --accent: #a86f2f;
       --accent-strong: #7f4e1e;
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #18140f;
+      --bg-top: #1f1913;
+      --panel: #211c14;
+      --ink: #f0ead9;
+      --muted: #9b9080;
+      --line: #332c20;
+      --accent: #d4913e;
+      --accent-strong: #e8a84e;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,7 +34,7 @@
       color: var(--ink);
       background:
         radial-gradient(circle at top left, rgba(168, 111, 47, 0.15), transparent 30%),
-        linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 100%);
       padding: 16px;
     }
 
@@ -52,14 +65,88 @@
       margin-bottom: 6px;
     }
 
-    textarea, input[type="text"], input[type="number"] {
+    textarea, input[type="text"], input[type="number"], select {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #fff;
+      background: var(--panel);
       color: var(--ink);
       padding: 10px 11px;
       font: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--muted);
+      pointer-events: none;
+    }
+
+    .preset-chips {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .chip svg {
+      flex-shrink: 0;
+    }
+
+    .viewport-section label {
+      margin-bottom: 8px;
+    }
+
+    .dim-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .dim-row label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 4px;
     }
 
     textarea {
@@ -88,6 +175,46 @@
       cursor: pointer;
     }
 
+    /* ── Header bar ── */
+    .top-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .top-bar-left { flex: 1; min-width: 0; }
+    .top-bar-left h2 { margin-bottom: 4px; }
+    .top-bar-left p { margin-bottom: 0; }
+
+    /* ── Theme toggle ── */
+    #themeBtn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    #themeBtn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #themeBtn svg { flex-shrink: 0; }
+
     .primary {
       width: 100%;
       background: var(--accent);
@@ -96,7 +223,7 @@
 
     .primary:hover { background: var(--accent-strong); }
     .secondary {
-      background: #f1e7d8;
+      background: var(--line);
       color: var(--ink);
     }
 
@@ -111,7 +238,7 @@
     .progress {
       margin-top: 12px;
       height: 8px;
-      background: #efe5d4;
+      background: var(--line);
       border-radius: 999px;
       overflow: hidden;
     }
@@ -141,8 +268,16 @@
   </style>
 </head>
 <body>
-  <h2>tempelhtml</h2>
-  <p class="subtle">Paste HTML or upload a `.html` file, then let the local converter build the Figma tree.</p>
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <h2>tempelhtml</h2>
+      <p class="subtle">Paste HTML or upload a <code>.html</code> file, then let the local converter build the Figma tree.</p>
+    </div>
+    <button id="themeBtn" title="Toggle theme">
+      <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <span id="themeLabel">System</span>
+    </button>
+  </div>
 
   <div class="panel stack">
     <div>
@@ -166,14 +301,31 @@
       </div>
     </div>
 
-    <div class="row">
-      <div>
-        <label for="widthInput">Viewport width</label>
-        <input id="widthInput" type="number" min="320" step="1" value="1440" />
+    <div class="viewport-section">
+      <label>Viewport preset</label>
+      <div class="preset-chips">
+        <button type="button" class="chip active" data-preset="desktop">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Desktop
+        </button>
+        <button type="button" class="chip" data-preset="tablet">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
+          Tab
+        </button>
+        <button type="button" class="chip" data-preset="mobile">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
+          Mobile
+        </button>
       </div>
-      <div>
-        <label for="heightInput">Viewport height</label>
-        <input id="heightInput" type="number" min="320" step="1" value="900" />
+      <div class="dim-row">
+        <div>
+          <label for="widthInput">Width (px)</label>
+          <input id="widthInput" type="number" min="320" step="1" value="1440" />
+        </div>
+        <div>
+          <label for="heightInput">Height (px)</label>
+          <input id="heightInput" type="number" min="320" step="1" value="900" />
+        </div>
       </div>
     </div>
 
@@ -199,6 +351,79 @@
     const buildBtn = document.getElementById('buildBtn');
     const progressFill = document.getElementById('progressFill');
     const statusEl = document.getElementById('status');
+
+    // ── Theme toggle (system → dark → light → system …) ──
+    const THEMES = ['system', 'dark', 'light'];
+    const THEME_ICONS = {
+      system: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+      dark:   '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+      light:  '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+    };
+    const THEME_LABELS = { system: 'System', dark: 'Dark', light: 'Light' };
+
+    const themeBtn   = document.getElementById('themeBtn');
+    const themeIcon  = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    const htmlEl     = document.documentElement;
+    const sysDark    = window.matchMedia('(prefers-color-scheme: dark)');
+
+    // Safe storage wrapper — localStorage is blocked in Figma's sandboxed iframe
+    const store = {
+      _mem: {},
+      get(k) { try { return localStorage.getItem(k); } catch(e) { return this._mem[k] || null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch(e) { this._mem[k] = v; } },
+    };
+
+    let currentTheme = store.get('tempelhtml-theme') || 'system';
+
+    function applyTheme(t) {
+      currentTheme = t;
+      store.set('tempelhtml-theme', t);
+
+      const isDark = t === 'dark' || (t === 'system' && sysDark.matches);
+      htmlEl.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+      themeIcon.innerHTML = THEME_ICONS[t];
+      themeLabel.textContent = THEME_LABELS[t];
+    }
+
+    themeBtn.addEventListener('click', () => {
+      const idx = THEMES.indexOf(currentTheme);
+      applyTheme(THEMES[(idx + 1) % THEMES.length]);
+    });
+
+    sysDark.addEventListener('change', () => {
+      if (currentTheme === 'system') applyTheme('system');
+    });
+
+    applyTheme(currentTheme);
+
+    // Viewport presets
+    const PRESETS = {
+      desktop: { width: 1440, height: 900 },
+      tablet:  { width: 768,  height: 1024 },
+      mobile:  { width: 375,  height: 812 },
+    };
+
+    const chips = document.querySelectorAll('.chip[data-preset]');
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        chips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        const preset = PRESETS[chip.dataset.preset];
+        if (preset) {
+          widthInput.value = preset.width;
+          heightInput.value = preset.height;
+        }
+      });
+    });
+
+    // Deactivate chip when user manually edits width/height
+    [widthInput, heightInput].forEach(input => {
+      input.addEventListener('input', () => {
+        chips.forEach(c => c.classList.remove('active'));
+      });
+    });
 
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files && fileInput.files[0];
