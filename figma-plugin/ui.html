@@ -123,14 +123,6 @@
       transition: width 0.2s linear;
     }
 
-    .check {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
     #status {
       margin-top: 12px;
       font-size: 12px;
@@ -185,11 +177,6 @@
       </div>
     </div>
 
-    <label class="check">
-      <input id="skipAiInput" type="checkbox" />
-      Skip AI helpers
-    </label>
-
     <button id="buildBtn" class="primary">Convert & Build</button>
 
     <div class="progress"><div id="progressFill"></div></div>
@@ -209,7 +196,6 @@
     const serverInput = document.getElementById('serverInput');
     const widthInput = document.getElementById('widthInput');
     const heightInput = document.getElementById('heightInput');
-    const skipAiInput = document.getElementById('skipAiInput');
     const buildBtn = document.getElementById('buildBtn');
     const progressFill = document.getElementById('progressFill');
     const statusEl = document.getElementById('status');
@@ -244,7 +230,6 @@
             sourceName: selectedFile ? selectedFile.name : 'inline.html',
             baseUrl: baseUrlInput.value.trim() || null,
             serverUrl: serverInput.value.trim() || null,
-            skipAi: skipAiInput.checked,
             viewport: {
               width: Number(widthInput.value) || 1440,
               height: Number(heightInput.value) || 900,

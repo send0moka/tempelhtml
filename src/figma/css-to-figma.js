@@ -183,11 +183,13 @@ export function mapBoxShadow(computed) {
   if (!computed.boxShadow || computed.boxShadow === 'none') return [];
 
   const parts = computed.boxShadow.match(
-    /(-?[\d.]+px)\s+(-?[\d.]+px)\s+([\d.]+px)\s*([\d.]+px)?\s*(rgba?\([^)]+\)|#[0-9a-f]{3,8})/i
+    /(?:(rgba?\([^)]+\)|#[0-9a-f]{3,8})\s+)?(-?[\d.]+px)\s+(-?[\d.]+px)\s+([\d.]+px)\s*([\d.]+px)?(?:\s+(rgba?\([^)]+\)|#[0-9a-f]{3,8}))?/i
   );
   if (!parts) return [];
 
-  const [, x, y, blur, spread = '0px', colorStr] = parts;
+  const [, leadingColor, x, y, blur, spread = '0px', trailingColor] = parts;
+  const colorStr = leadingColor || trailingColor;
+  if (!colorStr) return [];
   const color = cssColorToFigma(colorStr);
 
   return [{

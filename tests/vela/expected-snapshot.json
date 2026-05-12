@@ -5,9 +5,7 @@
     "viewport": {
       "width": 1440,
       "height": 900
-    },
-    "aiEnabled": false,
-    "skipAi": true
+    }
   },
   "warnings": [],
   "figmaTree": [
@@ -19,6 +17,7 @@
       "y": 0,
       "width": 1440,
       "height": 4482,
+      "_pageLayout": true,
       "fills": [
         {
           "type": "SOLID",
@@ -47,6 +46,7 @@
           "y": 0,
           "width": 1440,
           "height": 93,
+          "_role": "header",
           "fills": [],
           "paddingTop": 0,
           "paddingRight": 0,
@@ -172,41 +172,30 @@
                     {
                       "id": "li-el-0-0-0-1-0",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 0,
                       "width": 66,
                       "height": 21,
-                      "characters": "LAYANAN",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Layanan",
-                          "lineIndex": 0,
+                          "id": "a-el-0-0-0-1-0-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 3,
+                          "width": 66,
+                          "height": 17,
+                          "characters": "LAYANAN",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -231,49 +220,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Layanan",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 13,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.56,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "UPPER",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-0-0-1-1",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 106,
                       "y": 0,
                       "width": 94,
                       "height": 21,
-                      "characters": "PORTOFOLIO",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Portofolio",
-                          "lineIndex": 0,
+                          "id": "a-el-0-0-0-1-1-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 3,
+                          "width": 94,
+                          "height": 17,
+                          "characters": "PORTOFOLIO",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -298,49 +307,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Portofolio",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 13,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.56,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "UPPER",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-0-0-1-2",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 241,
                       "y": 0,
                       "width": 54,
                       "height": 21,
-                      "characters": "STUDIO",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Studio",
-                          "lineIndex": 0,
+                          "id": "a-el-0-0-0-1-2-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 3,
+                          "width": 54,
+                          "height": 17,
+                          "characters": "STUDIO",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -365,64 +394,76 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Studio",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 13,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.56,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "UPPER",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-0-0-1-3",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 335,
                       "y": 0,
                       "width": 152,
                       "height": 21,
-                      "characters": "MULAI PROYEK",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Mulai Proyek",
-                          "lineIndex": 0,
-                          "fontName": {
-                            "family": "DM Sans",
-                            "style": "Light"
-                          },
-                          "fontSize": 13,
-                          "lineHeight": {
-                            "unit": "AUTO"
-                          },
-                          "letterSpacing": {
-                            "value": 1.56,
-                            "unit": "PIXELS"
-                          },
-                          "textAlignHorizontal": "LEFT",
-                          "textCase": "UPPER",
-                          "fills": [
+                          "id": "a-nav-cta-0-0-0-1-3-0",
+                          "name": "a.nav-cta",
+                          "type": "FRAME",
+                          "x": 0,
+                          "y": -8,
+                          "width": 152,
+                          "height": 39,
+                          "fills": [],
+                          "paddingTop": 10,
+                          "paddingRight": 22,
+                          "paddingBottom": 10,
+                          "paddingLeft": 22,
+                          "clipsContent": false,
+                          "cornerRadius": 0,
+                          "strokes": [
                             {
                               "type": "SOLID",
                               "color": {
@@ -432,10 +473,82 @@
                               },
                               "opacity": 1
                             }
+                          ],
+                          "strokeWeight": 1,
+                          "strokeAlign": "INSIDE",
+                          "effects": [],
+                          "opacity": 1,
+                          "children": [
+                            {
+                              "id": "span-el-0-0-0-1-3-0-0",
+                              "name": "span",
+                              "type": "TEXT",
+                              "x": 23,
+                              "y": 11,
+                              "width": 106,
+                              "height": 17,
+                              "characters": "Mulai Proyek",
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 13,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.56,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "UPPER",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.788235294117647,
+                                    "g": 0.6588235294117647,
+                                    "b": 0.2980392156862745
+                                  },
+                                  "opacity": 1
+                                }
+                              ],
+                              "textRuns": [
+                                {
+                                  "text": "Mulai Proyek",
+                                  "lineIndex": 0,
+                                  "fontName": {
+                                    "family": "DM Sans",
+                                    "style": "Light"
+                                  },
+                                  "fontSize": 13,
+                                  "lineHeight": {
+                                    "unit": "AUTO"
+                                  },
+                                  "letterSpacing": {
+                                    "value": 1.56,
+                                    "unit": "PIXELS"
+                                  },
+                                  "textAlignHorizontal": "LEFT",
+                                  "textCase": "UPPER",
+                                  "fills": [
+                                    {
+                                      "type": "SOLID",
+                                      "color": {
+                                        "r": 0.788235294117647,
+                                        "g": 0.6588235294117647,
+                                        "b": 0.2980392156862745
+                                      },
+                                      "opacity": 1
+                                    }
+                                  ]
+                                }
+                              ],
+                              "opacity": 1
+                            }
                           ]
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     }
                   ]
                 }
@@ -478,10 +591,6 @@
               "cornerRadius": 0,
               "effects": [],
               "opacity": 1,
-              "layoutMode": "VERTICAL",
-              "primaryAxisAlignItems": "CENTER",
-              "counterAxisAlignItems": "MIN",
-              "itemSpacing": 0,
               "children": [
                 {
                   "id": "p-hero-label-0-1-0-0",
@@ -892,14 +1001,14 @@
                       "opacity": 1,
                       "children": [
                         {
-                          "id": "a-btn-primary-0-1-0-3-0-text-inner",
-                          "name": "a.btn-primary / text",
+                          "id": "span-el-0-1-0-3-0-0",
+                          "name": "span",
                           "type": "TEXT",
                           "x": 36,
                           "y": 16,
                           "width": 139,
                           "height": 17,
-                          "characters": "LIHAT PORTOFOLIO",
+                          "characters": "Lihat Portofolio",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Medium"
@@ -955,48 +1064,42 @@
                                 }
                               ]
                             }
-                          ]
+                          ],
+                          "opacity": 1
                         }
                       ]
                     },
                     {
                       "id": "a-btn-ghost-0-1-0-3-1",
                       "name": "a.btn-ghost",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 231,
                       "y": 13,
                       "width": 107,
                       "height": 24,
-                      "characters": "Kenali Kami\n→",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 13,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 1.04,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 10,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.9411764705882353,
-                            "g": 0.9215686274509803,
-                            "b": 0.8784313725490196
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Kenali Kami ",
-                          "lineIndex": 0,
+                          "id": "span-el-0-1-0-3-1-0",
+                          "name": "span",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 4,
+                          "width": 78,
+                          "height": 17,
+                          "characters": "Kenali Kami",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -1021,11 +1124,49 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Kenali Kami",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 13,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.04,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.9411764705882353,
+                                    "g": 0.9215686274509803,
+                                    "b": 0.8784313725490196
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         },
                         {
-                          "text": "→",
-                          "lineIndex": 0,
+                          "id": "span-el-0-1-0-3-1-1",
+                          "name": "span",
+                          "type": "TEXT",
+                          "x": 88,
+                          "y": 0,
+                          "width": 19,
+                          "height": 24,
+                          "characters": "→",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -1050,10 +1191,41 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "→",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 18,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 1.04,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.9411764705882353,
+                                    "g": 0.9215686274509803,
+                                    "b": 0.8784313725490196
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     }
                   ]
                 }
@@ -1345,7 +1517,25 @@
                           "paddingLeft": 0,
                           "clipsContent": false,
                           "cornerRadius": 4,
-                          "effects": [],
+                          "effects": [
+                            {
+                              "type": "DROP_SHADOW",
+                              "color": {
+                                "r": 0.788235294117647,
+                                "g": 0.6588235294117647,
+                                "b": 0.2980392156862745,
+                                "a": 0.3
+                              },
+                              "offset": {
+                                "x": 0,
+                                "y": 0
+                              },
+                              "radius": 30,
+                              "spread": 10,
+                              "visible": true,
+                              "blendMode": "NORMAL"
+                            }
+                          ],
                           "opacity": 1,
                           "layoutPositioning": "ABSOLUTE",
                           "children": []
@@ -2402,42 +2592,30 @@
                 {
                   "id": "div-stat-number-0-3-0-0",
                   "name": "div.stat-number",
-                  "type": "TEXT",
+                  "type": "FRAME",
                   "x": 50,
                   "y": 60,
                   "width": 259,
                   "height": 52,
-                  "characters": "12+",
-                  "fontName": {
-                    "family": "Playfair Display",
-                    "style": "Black"
-                  },
-                  "fontSize": 52,
-                  "lineHeight": {
-                    "value": 52,
-                    "unit": "PIXELS"
-                  },
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PIXELS"
-                  },
-                  "textAlignHorizontal": "LEFT",
-                  "textCase": "ORIGINAL",
-                  "fills": [
+                  "fills": [],
+                  "paddingTop": 0,
+                  "paddingRight": 0,
+                  "paddingBottom": 0,
+                  "paddingLeft": 0,
+                  "clipsContent": false,
+                  "cornerRadius": 0,
+                  "effects": [],
+                  "opacity": 1,
+                  "children": [
                     {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.9803921568627451,
-                        "g": 0.9725490196078431,
-                        "b": 0.9529411764705882
-                      },
-                      "opacity": 1
-                    }
-                  ],
-                  "textRuns": [
-                    {
-                      "text": "12",
-                      "lineIndex": 0,
+                      "id": "span-el-0-3-0-0-0",
+                      "name": "span",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": -9,
+                      "width": 49,
+                      "height": 69,
+                      "characters": "12",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2463,11 +2641,50 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "12",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.9803921568627451,
+                                "g": 0.9725490196078431,
+                                "b": 0.9529411764705882
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     },
                     {
-                      "text": "+",
-                      "lineIndex": 0,
+                      "id": "em-el-0-3-0-0-1",
+                      "name": "em",
+                      "type": "TEXT",
+                      "x": 49,
+                      "y": -9,
+                      "width": 29,
+                      "height": 69,
+                      "characters": "+",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2493,10 +2710,42 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "+",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.788235294117647,
+                                "g": 0.6588235294117647,
+                                "b": 0.2980392156862745
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     }
-                  ],
-                  "opacity": 1
+                  ]
                 },
                 {
                   "id": "div-stat-label-0-3-0-1",
@@ -2588,42 +2837,30 @@
                 {
                   "id": "div-stat-number-0-3-1-0",
                   "name": "div.stat-number",
-                  "type": "TEXT",
+                  "type": "FRAME",
                   "x": 50,
                   "y": 60,
                   "width": 259,
                   "height": 52,
-                  "characters": "340+",
-                  "fontName": {
-                    "family": "Playfair Display",
-                    "style": "Black"
-                  },
-                  "fontSize": 52,
-                  "lineHeight": {
-                    "value": 52,
-                    "unit": "PIXELS"
-                  },
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PIXELS"
-                  },
-                  "textAlignHorizontal": "LEFT",
-                  "textCase": "ORIGINAL",
-                  "fills": [
+                  "fills": [],
+                  "paddingTop": 0,
+                  "paddingRight": 0,
+                  "paddingBottom": 0,
+                  "paddingLeft": 0,
+                  "clipsContent": false,
+                  "cornerRadius": 0,
+                  "effects": [],
+                  "opacity": 1,
+                  "children": [
                     {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.9803921568627451,
-                        "g": 0.9725490196078431,
-                        "b": 0.9529411764705882
-                      },
-                      "opacity": 1
-                    }
-                  ],
-                  "textRuns": [
-                    {
-                      "text": "340",
-                      "lineIndex": 0,
+                      "id": "span-el-0-3-1-0-0",
+                      "name": "span",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": -9,
+                      "width": 90,
+                      "height": 69,
+                      "characters": "340",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2649,11 +2886,50 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "340",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.9803921568627451,
+                                "g": 0.9725490196078431,
+                                "b": 0.9529411764705882
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     },
                     {
-                      "text": "+",
-                      "lineIndex": 0,
+                      "id": "em-el-0-3-1-0-1",
+                      "name": "em",
+                      "type": "TEXT",
+                      "x": 90,
+                      "y": -9,
+                      "width": 29,
+                      "height": 69,
+                      "characters": "+",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2679,10 +2955,42 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "+",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.788235294117647,
+                                "g": 0.6588235294117647,
+                                "b": 0.2980392156862745
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     }
-                  ],
-                  "opacity": 1
+                  ]
                 },
                 {
                   "id": "div-stat-label-0-3-1-1",
@@ -2774,42 +3082,30 @@
                 {
                   "id": "div-stat-number-0-3-2-0",
                   "name": "div.stat-number",
-                  "type": "TEXT",
+                  "type": "FRAME",
                   "x": 50,
                   "y": 60,
                   "width": 259,
                   "height": 52,
-                  "characters": "98%",
-                  "fontName": {
-                    "family": "Playfair Display",
-                    "style": "Black"
-                  },
-                  "fontSize": 52,
-                  "lineHeight": {
-                    "value": 52,
-                    "unit": "PIXELS"
-                  },
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PIXELS"
-                  },
-                  "textAlignHorizontal": "LEFT",
-                  "textCase": "ORIGINAL",
-                  "fills": [
+                  "fills": [],
+                  "paddingTop": 0,
+                  "paddingRight": 0,
+                  "paddingBottom": 0,
+                  "paddingLeft": 0,
+                  "clipsContent": false,
+                  "cornerRadius": 0,
+                  "effects": [],
+                  "opacity": 1,
+                  "children": [
                     {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.9803921568627451,
-                        "g": 0.9725490196078431,
-                        "b": 0.9529411764705882
-                      },
-                      "opacity": 1
-                    }
-                  ],
-                  "textRuns": [
-                    {
-                      "text": "98",
-                      "lineIndex": 0,
+                      "id": "span-el-0-3-2-0-0",
+                      "name": "span",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": -9,
+                      "width": 61,
+                      "height": 69,
+                      "characters": "98",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2835,11 +3131,50 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "98",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.9803921568627451,
+                                "g": 0.9725490196078431,
+                                "b": 0.9529411764705882
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     },
                     {
-                      "text": "%",
-                      "lineIndex": 0,
+                      "id": "em-el-0-3-2-0-1",
+                      "name": "em",
+                      "type": "TEXT",
+                      "x": 61,
+                      "y": -9,
+                      "width": 37,
+                      "height": 69,
+                      "characters": "%",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -2865,10 +3200,42 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "%",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.788235294117647,
+                                "g": 0.6588235294117647,
+                                "b": 0.2980392156862745
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     }
-                  ],
-                  "opacity": 1
+                  ]
                 },
                 {
                   "id": "div-stat-label-0-3-2-1",
@@ -2960,42 +3327,30 @@
                 {
                   "id": "div-stat-number-0-3-3-0",
                   "name": "div.stat-number",
-                  "type": "TEXT",
+                  "type": "FRAME",
                   "x": 50,
                   "y": 60,
                   "width": 260,
                   "height": 52,
-                  "characters": "24×",
-                  "fontName": {
-                    "family": "Playfair Display",
-                    "style": "Black"
-                  },
-                  "fontSize": 52,
-                  "lineHeight": {
-                    "value": 52,
-                    "unit": "PIXELS"
-                  },
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PIXELS"
-                  },
-                  "textAlignHorizontal": "LEFT",
-                  "textCase": "ORIGINAL",
-                  "fills": [
+                  "fills": [],
+                  "paddingTop": 0,
+                  "paddingRight": 0,
+                  "paddingBottom": 0,
+                  "paddingLeft": 0,
+                  "clipsContent": false,
+                  "cornerRadius": 0,
+                  "effects": [],
+                  "opacity": 1,
+                  "children": [
                     {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.9803921568627451,
-                        "g": 0.9725490196078431,
-                        "b": 0.9529411764705882
-                      },
-                      "opacity": 1
-                    }
-                  ],
-                  "textRuns": [
-                    {
-                      "text": "24",
-                      "lineIndex": 0,
+                      "id": "span-el-0-3-3-0-0",
+                      "name": "span",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": -9,
+                      "width": 57,
+                      "height": 69,
+                      "characters": "24",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -3021,11 +3376,50 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "24",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.9803921568627451,
+                                "g": 0.9725490196078431,
+                                "b": 0.9529411764705882
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     },
                     {
-                      "text": "×",
-                      "lineIndex": 0,
+                      "id": "em-el-0-3-3-0-1",
+                      "name": "em",
+                      "type": "TEXT",
+                      "x": 57,
+                      "y": -9,
+                      "width": 25,
+                      "height": 69,
+                      "characters": "×",
                       "fontName": {
                         "family": "Playfair Display",
                         "style": "Black"
@@ -3051,10 +3445,42 @@
                           },
                           "opacity": 1
                         }
-                      ]
+                      ],
+                      "textRuns": [
+                        {
+                          "text": "×",
+                          "lineIndex": 0,
+                          "fontName": {
+                            "family": "Playfair Display",
+                            "style": "Black"
+                          },
+                          "fontSize": 52,
+                          "lineHeight": {
+                            "value": 52,
+                            "unit": "PIXELS"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.788235294117647,
+                                "g": 0.6588235294117647,
+                                "b": 0.2980392156862745
+                              },
+                              "opacity": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "opacity": 1
                     }
-                  ],
-                  "opacity": 1
+                  ]
                 },
                 {
                   "id": "div-stat-label-0-3-3-1",
@@ -6310,13 +6736,13 @@
                       "itemSpacing": 0,
                       "children": [
                         {
-                          "id": "div-author-avatar-0-6-0-2-0-text-inner",
-                          "name": "div.author-avatar / text",
+                          "id": "span-el-0-6-0-2-0-0",
+                          "name": "span",
                           "type": "TEXT",
-                          "x": 0,
-                          "y": 0,
-                          "width": 46,
-                          "height": 46,
+                          "x": 12,
+                          "y": 13,
+                          "width": 21,
+                          "height": 21,
                           "characters": "AR",
                           "fontName": {
                             "family": "Playfair Display",
@@ -6373,7 +6799,8 @@
                                 }
                               ]
                             }
-                          ]
+                          ],
+                          "opacity": 1
                         }
                       ]
                     },
@@ -6878,14 +7305,14 @@
                       "opacity": 1,
                       "children": [
                         {
-                          "id": "button-cta-btn-0-7-1-1-1-text-inner",
-                          "name": "button.cta-btn / text",
+                          "id": "span-el-0-7-1-1-1-0",
+                          "name": "span",
                           "type": "TEXT",
                           "x": 28,
-                          "y": 16,
+                          "y": 17,
                           "width": 85,
-                          "height": 18,
-                          "characters": "HUBUNGI →",
+                          "height": 17,
+                          "characters": "Hubungi →",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Medium"
@@ -6941,7 +7368,8 @@
                                 }
                               ]
                             }
-                          ]
+                          ],
+                          "opacity": 1
                         }
                       ]
                     }
@@ -7315,41 +7743,30 @@
                     {
                       "id": "li-el-0-8-1-1-0",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 0,
                       "width": 228,
                       "height": 21,
-                      "characters": "Brand Identity",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Brand Identity",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-1-1-0-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 90,
+                          "height": 18,
+                          "characters": "Brand Identity",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7374,49 +7791,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Brand Identity",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-1-1-1",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 33,
                       "width": 228,
                       "height": 21,
-                      "characters": "Web Design",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Web Design",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-1-1-1-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 76,
+                          "height": 18,
+                          "characters": "Web Design",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7441,49 +7878,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Web Design",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-1-1-2",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 66,
                       "width": 228,
                       "height": 21,
-                      "characters": "Motion",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Motion",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-1-1-2-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 44,
+                          "height": 18,
+                          "characters": "Motion",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7508,49 +7965,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Motion",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-1-1-3",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 99,
                       "width": 228,
                       "height": 21,
-                      "characters": "Konsultasi",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Konsultasi",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-1-1-3-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 64,
+                          "height": 18,
+                          "characters": "Konsultasi",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7575,10 +8052,41 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Konsultasi",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     }
                   ]
                 }
@@ -7694,41 +8202,30 @@
                     {
                       "id": "li-el-0-8-2-1-0",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 0,
                       "width": 228,
                       "height": 21,
-                      "characters": "Tentang Kami",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Tentang Kami",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-2-1-0-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 85,
+                          "height": 18,
+                          "characters": "Tentang Kami",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7753,49 +8250,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Tentang Kami",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-2-1-1",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 33,
                       "width": 228,
                       "height": 21,
-                      "characters": "Tim",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Tim",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-2-1-1-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 23,
+                          "height": 18,
+                          "characters": "Tim",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7820,49 +8337,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Tim",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-2-1-2",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 66,
                       "width": 228,
                       "height": 21,
-                      "characters": "Karir",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Karir",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-2-1-2-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 29,
+                          "height": 18,
+                          "characters": "Karir",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7887,49 +8424,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Karir",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-2-1-3",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 99,
                       "width": 228,
                       "height": 21,
-                      "characters": "Blog",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Blog",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-2-1-3-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 27,
+                          "height": 18,
+                          "characters": "Blog",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -7954,10 +8511,41 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Blog",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     }
                   ]
                 }
@@ -8073,41 +8661,30 @@
                     {
                       "id": "li-el-0-8-3-1-0",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 0,
                       "width": 228,
                       "height": 21,
-                      "characters": "halo@vela.studio",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "halo@vela.studio",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-3-1-0-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 108,
+                          "height": 18,
+                          "characters": "halo@vela.studio",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -8132,49 +8709,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "halo@vela.studio",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-3-1-1",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 33,
                       "width": 228,
                       "height": 21,
-                      "characters": "Jakarta, Indonesia",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "Jakarta, Indonesia",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-3-1-1-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 114,
+                          "height": 18,
+                          "characters": "Jakarta, Indonesia",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -8199,49 +8796,69 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "Jakarta, Indonesia",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     },
                     {
                       "id": "li-el-0-8-3-1-2",
                       "name": "li",
-                      "type": "TEXT",
+                      "type": "FRAME",
                       "x": 0,
                       "y": 66,
                       "width": 228,
                       "height": 21,
-                      "characters": "+62 812 0000 0000",
-                      "fontName": {
-                        "family": "DM Sans",
-                        "style": "Light"
-                      },
-                      "fontSize": 16,
-                      "lineHeight": {
-                        "unit": "AUTO"
-                      },
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PIXELS"
-                      },
-                      "textAlignHorizontal": "LEFT",
-                      "textCase": "ORIGINAL",
-                      "fills": [
+                      "fills": [],
+                      "paddingTop": 0,
+                      "paddingRight": 0,
+                      "paddingBottom": 0,
+                      "paddingLeft": 0,
+                      "clipsContent": false,
+                      "cornerRadius": 0,
+                      "effects": [],
+                      "opacity": 1,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 0.8392156862745098,
-                            "g": 0.8117647058823529,
-                            "b": 0.7529411764705882
-                          },
-                          "opacity": 1
-                        }
-                      ],
-                      "textRuns": [
-                        {
-                          "text": "+62 812 0000 0000",
-                          "lineIndex": 0,
+                          "id": "a-el-0-8-3-1-2-0",
+                          "name": "a",
+                          "type": "TEXT",
+                          "x": 0,
+                          "y": 2,
+                          "width": 132,
+                          "height": 18,
+                          "characters": "+62 812 0000 0000",
                           "fontName": {
                             "family": "DM Sans",
                             "style": "Light"
@@ -8266,10 +8883,41 @@
                               },
                               "opacity": 1
                             }
-                          ]
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "+62 812 0000 0000",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Light"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "opacity": 1
                         }
-                      ],
-                      "opacity": 1
+                      ]
                     }
                   ]
                 }
@@ -8608,6 +9256,5 @@
         }
       ]
     }
-  ],
-  "hoverSpecs": {}
+  ]
 }

@@ -108,9 +108,60 @@ test('groups top-level fixed bars into a header frame', () => {
 
   const [tree] = buildFigmaTree({ annotated: body });
 
+  expect(tree._pageLayout).toBe(true);
   expect(tree.children[0].name).toBe('header');
+  expect(tree.children[0]._role).toBe('header');
   expect(tree.children[0].children[0].name).toBe('nav');
   expect(tree.children[1].name).toBe('section.hero');
+});
+
+test('keeps margin-driven flex stacks out of auto-layout', () => {
+  const heroLeft = frameNode({
+    tag: 'div',
+    classList: ['hero-left'],
+    rect: { x: 0, y: 0, width: 720, height: 900 },
+    computed: {
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      paddingTop: '160px',
+      paddingRight: '60px',
+      paddingBottom: '80px',
+      paddingLeft: '60px',
+    },
+    children: [
+      frameNode({
+        tag: 'p',
+        rect: { x: 60, y: 236, width: 200, height: 14 },
+        computed: { marginBottom: '32px' },
+      }),
+      frameNode({
+        tag: 'h1',
+        rect: { x: 60, y: 282, width: 600, height: 246 },
+        computed: { marginBottom: '8px' },
+      }),
+      frameNode({
+        tag: 'p',
+        rect: { x: 60, y: 572, width: 360, height: 76 },
+        computed: { marginTop: '36px', marginBottom: '48px' },
+      }),
+      frameNode({
+        tag: 'div',
+        rect: { x: 60, y: 695, width: 240, height: 49 },
+      }),
+    ],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 1440, height: 900 },
+    children: [heroLeft],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+
+  expect(tree.children[0].layoutMode).toBeUndefined();
+  expect(tree.children[0].children[1].y).toBe(282);
+  expect(tree.children[0].children[3].y).toBe(695);
 });
 
 test('skips auto-layout grid strategy for complex two-dimensional grids', () => {
@@ -152,7 +203,7 @@ test('skips auto-layout grid strategy for complex two-dimensional grids', () => 
             counterAxisSizingMode: 'FIXED',
             itemSpacing: 24,
           },
-          notes: 'AI guessed a vertical stack',
+          notes: 'deterministic fallback guessed a vertical stack',
         },
       },
     }

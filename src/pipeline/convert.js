@@ -4,9 +4,6 @@
  */
 
 import { extractFromFile, extractFromHtml } from '../core/extractor.js';
-import { detectPseudoElements } from '../ai/pseudo-detector.js';
-import { resolveGridLayouts } from '../ai/grid-resolver.js';
-import { analyzeHoverStates } from '../ai/hover-analyzer.js';
 import { resolveFonts } from '../figma/font-resolver.js';
 import { sortByZIndex } from '../figma/z-index-sorter.js';
 import { buildFigmaTree } from '../figma/mapper.js';
@@ -23,7 +20,6 @@ export async function convertHtmlFile(inputPath, options = {}) {
     extractor: () => extractFromFile(inputPath, viewport),
     source: inputPath,
     viewport,
-    skipAi: options.skipAi,
     onProgress: options.onProgress,
   });
 }
@@ -41,59 +37,20 @@ export async function convertHtmlString(html, options = {}) {
     }),
     source: options.sourceName ?? 'inline.html',
     viewport,
-    skipAi: options.skipAi,
     baseUrl: options.baseUrl ?? null,
     onProgress: options.onProgress,
   });
 }
 
-async function convertWithExtractor({ extractor, source, viewport, skipAi = false, baseUrl = null, onProgress = null }) {
+async function convertWithExtractor({ extractor, source, viewport, baseUrl = null, onProgress = null }) {
   progress(onProgress, 5, 'Extracting page...');
-  const { domTree, rawCSS, screenshots } = await extractor();
-  const warnings = [];
-
-  let pseudoElements = [];
-  let gridStrategies = {};
-  let hoverSpecs = {};
-
-  const aiEnabled = !skipAi && Boolean(process.env.ANTHROPIC_API_KEY);
-  if (!skipAi && !process.env.ANTHROPIC_API_KEY) {
-    warnings.push('ANTHROPIC_API_KEY not found, so AI enhancement steps were skipped.');
-  }
-
-  if (aiEnabled) {
-    progress(onProgress, 25, 'Detecting pseudo-elements...');
-    pseudoElements = await runAiStep(
-      'pseudo-element detection',
-      () => detectPseudoElements(screenshots.withPseudo, screenshots.withoutPseudo),
-      [],
-      warnings
-    );
-
-    progress(onProgress, 45, 'Resolving CSS grid...');
-    gridStrategies = await runAiStep(
-      'grid layout resolution',
-      () => resolveGridLayouts(rawCSS, domTree),
-      {},
-      warnings
-    );
-
-    progress(onProgress, 65, 'Analyzing hover states...');
-    hoverSpecs = await runAiStep(
-      'hover analysis',
-      () => analyzeHoverStates(rawCSS),
-      {},
-      warnings
-    );
-  } else {
-    progress(onProgress, 65, 'Skipping AI steps...');
-  }
+  const { domTree } = await extractor();
 
   progress(onProgress, 78, 'Resolving fonts...');
   const fontMap = await resolveFonts(domTree);
   progress(onProgress, 86, 'Building Figma tree...');
   const sorted = sortByZIndex(domTree);
-  const figmaTree = buildFigmaTree(sorted, { pseudoElements, gridStrategies, hoverSpecs, fontMap });
+  const figmaTree = buildFigmaTree(sorted, { fontMap });
   progress(onProgress, 90, 'Snapshot ready. Sending to Figma...');
 
   return {
@@ -102,27 +59,15 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
       source,
       viewport,
       ...(baseUrl ? { baseUrl } : {}),
-      aiEnabled,
-      skipAi: !aiEnabled,
     },
-    warnings,
+    warnings: [],
     figmaTree,
-    hoverSpecs,
   };
 }
 
 function progress(onProgress, percent, message) {
   if (typeof onProgress === 'function') {
     onProgress(percent, message);
-  }
-}
-
-async function runAiStep(label, fn, fallback, warnings) {
-  try {
-    return await fn();
-  } catch (error) {
-    warnings.push(`AI step failed for ${label}: ${error.message}`);
-    return fallback;
   }
 }
 
@@ -137,6 +82,6 @@ function normalizeViewport(viewport = {}) {
 }
 
 /**
- * @typedef {{ viewport?: { width?: number, height?: number }, skipAi?: boolean }} ConvertOptions
+ * @typedef {{ viewport?: { width?: number, height?: number } }} ConvertOptions
  * @typedef {ConvertOptions & { sourceName?: string, baseUrl?: string | null }} ConvertHtmlOptions
  */

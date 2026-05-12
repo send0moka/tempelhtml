@@ -4,7 +4,6 @@
  * The plugin UI sends HTML here, and this server returns the converted JSON.
  */
 
-import 'dotenv/config';
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { convertHtmlString } from '../src/pipeline/convert.js';
@@ -81,7 +80,6 @@ const server = http.createServer(async (req, res) => {
       const result = await convertHtmlString(body.html, {
         sourceName: body.sourceName || 'inline.html',
         baseUrl: body.baseUrl || null,
-        skipAi: Boolean(body.skipAi),
         viewport: {
           width: body.viewport?.width,
           height: body.viewport?.height,
@@ -112,7 +110,6 @@ async function runJob(jobId, body) {
   const result = await convertHtmlString(body.html, {
     sourceName: body.sourceName || 'inline.html',
     baseUrl: body.baseUrl || null,
-    skipAi: Boolean(body.skipAi),
     viewport: {
       width: body.viewport && body.viewport.width,
       height: body.viewport && body.viewport.height,

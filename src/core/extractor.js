@@ -8,12 +8,11 @@ import { chromium } from 'playwright';
 import { existsSync, statSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { pathToFileURL } from 'url';
-import { captureScreenshots } from './screenshot.js';
 
 /**
  * @param {string} filePath - absolute or relative path to HTML file
  * @param {{ width: number, height: number }} viewport
- * @returns {{ domTree, rawCSS, screenshots }}
+ * @returns {{ domTree }}
  */
 export async function extractFromFile(filePath, { width = 1440, height = 900 } = {}) {
   const absPath = resolve(filePath);
@@ -29,7 +28,7 @@ export async function extractFromFile(filePath, { width = 1440, height = 900 } =
 /**
  * @param {string} html
  * @param {{ width?: number, height?: number, baseUrl?: string | null }} options
- * @returns {{ domTree, rawCSS, screenshots }}
+ * @returns {{ domTree }}
  */
 export async function extractFromHtml(html, { width = 1440, height = 900, baseUrl = null } = {}) {
   const browser = await chromium.launch();
@@ -45,23 +44,9 @@ export async function extractFromHtml(html, { width = 1440, height = 900, baseUr
 async function extractFromPage(page) {
   await stabilizePage(page);
 
-  // Collect raw CSS text from all stylesheets
-  const rawCSS = await page.evaluate(() => {
-    return Array.from(document.styleSheets)
-      .flatMap(sheet => {
-        try { return Array.from(sheet.cssRules).map(r => r.cssText); }
-        catch { return []; }
-      })
-      .join('\n');
-  });
-
   // Walk the full DOM and capture computed styles + rects
   const domTree = await page.evaluate(walkDOMInBrowser);
-
-  // Screenshots for pseudo-element detection
-  const screenshots = await captureScreenshots(page);
-
-  return { domTree, rawCSS, screenshots };
+  return { domTree };
 }
 
 async function stabilizePage(page) {
@@ -137,7 +122,7 @@ function escapeHtmlAttribute(value) {
  */
 function walkDOMInBrowser() {
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'HEAD', 'NOSCRIPT']);
-  const TEXT_TAGS = new Set(['p', 'span', 'a', 'label', 'li', 'em', 'strong', 'b', 'i', 'small', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+  const TEXT_TAGS = new Set(['p', 'span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
   const INLINE_TAGS = new Set(['span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'mark', 'sup', 'sub', 'u', 's', 'code', 'br', 'wbr']);
 
   function getNode(el, depth = 0) {
@@ -164,18 +149,14 @@ function walkDOMInBrowser() {
       parseFloat(cs.paddingLeft) > 0 ||
       cs.boxShadow !== 'none';
     const hasOnlyInlineTextChildren = Boolean(rawText) && Array.from(el.children).length > 0 && Array.from(el.children).every((child) => isInlineTextChild(child));
-    const isTextContainer = Boolean(rawText) && !hasVisualBox && (
-      TEXT_TAGS.has(tag) ||
-      el.children.length === 0 ||
-      hasOnlyInlineTextChildren
-    );
+    const isTextContainer = Boolean(rawText) && !hasVisualBox && canCollapseToTextContainer(el, tag, cs, hasOnlyInlineTextChildren);
 
     const textData = rawText ? extractTextData(el) : null;
 
     const children = isTextContainer
       ? []
-      : Array.from(el.children)
-          .map(child => getNode(child, depth + 1))
+      : Array.from(el.childNodes)
+          .map((child) => getChildNode(child, el, cs, depth + 1))
           .filter(Boolean);
 
     return {
@@ -345,6 +326,60 @@ function walkDOMInBrowser() {
     };
   }
 
+  function getChildNode(child, parentEl, parentStyles, depth) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      return getDirectTextNode(child, parentStyles);
+    }
+
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      return getNode(child, depth);
+    }
+
+    return null;
+  }
+
+  function getDirectTextNode(textNode, parentStyles) {
+    const normalizedText = normalizeTextFragment(textNode.textContent || '').trim();
+    if (!normalizedText) {
+      return null;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+
+    const computed = extractRelevantStyles(parentStyles);
+    computed.display = 'inline';
+    computed.position = 'static';
+    computed.width = `${rect.width}px`;
+    computed.height = `${rect.height}px`;
+    computed.minWidth = '0px';
+    computed.minHeight = '0px';
+
+    return {
+      tag: 'span',
+      id: null,
+      classList: [],
+      text: normalizedText,
+      textRuns: [{
+        text: normalizedText,
+        lineIndex: 0,
+        computed: extractTextRunStyles(parentStyles),
+      }],
+      isTextContainer: true,
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      computed,
+      pseudo: {
+        before: null,
+        after: null,
+      },
+      children: [],
+    };
+  }
+
   function normalizeTextFragment(text) {
     return String(text || '')
       .replace(/\r/g, '')
@@ -376,6 +411,19 @@ function walkDOMInBrowser() {
       parseFloat(cs.paddingBottom) > 0 ||
       parseFloat(cs.paddingLeft) > 0 ||
       cs.boxShadow !== 'none';
+  }
+
+  function canCollapseToTextContainer(el, tag, cs, hasOnlyInlineTextChildren) {
+    const hasElementChildren = el.children.length > 0;
+    if (!hasElementChildren) {
+      return true;
+    }
+
+    if (!TEXT_TAGS.has(tag) || !hasOnlyInlineTextChildren) {
+      return false;
+    }
+
+    return true;
   }
 
 function normalizeTextContent(value) {

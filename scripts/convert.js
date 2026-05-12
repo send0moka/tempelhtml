@@ -4,7 +4,6 @@
  * Usage: node scripts/convert.js --input ./examples/page.html --output ./out/page.json
  */
 
-import 'dotenv/config';
 import { program } from 'commander';
 import { writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
@@ -15,7 +14,6 @@ program
   .requiredOption('--output <path>', 'Path for output JSON (loaded by Figma plugin)')
   .option('--width <px>', 'Viewport width', '1440')
   .option('--height <px>', 'Viewport height', '900')
-  .option('--skip-ai', 'Skip AI steps (faster, less accurate)')
   .parse();
 
 const opts = program.opts();
@@ -28,7 +26,6 @@ async function run() {
       width: parseInt(opts.width, 10),
       height: parseInt(opts.height, 10),
     },
-    skipAi: Boolean(opts.skipAi),
   });
 
   mkdirSync(dirname(opts.output), { recursive: true });

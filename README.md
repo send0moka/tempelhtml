@@ -4,7 +4,7 @@ HTML to Figma converter with a local HTML-first flow.
 
 ## Flow
 1. Playwright renders the HTML and captures computed styles.
-2. Optional AI steps handle pseudo elements, grid, and hover states.
+2. The local pipeline resolves fonts, ordering, and Figma-ready layout data.
 3. A local server returns Figma-ready JSON.
 4. The Figma plugin builds the design from that JSON automatically.
 
@@ -32,5 +32,5 @@ npm run snapshot:update
 - `scripts/convert.js` CLI conversion
 - `scripts/server.js` local bridge for the plugin
 - `figma-plugin/` Figma UI and builder
-- `src/` Playwright, AI, and Figma mapping code
+- `src/` Playwright extraction and Figma mapping code
 - `tests/vela/` fixture and snapshot

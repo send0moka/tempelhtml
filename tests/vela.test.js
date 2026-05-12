@@ -3,7 +3,6 @@ import { convertHtmlFile } from '../src/pipeline/convert.js';
 
 test('vela fixture matches the deterministic snapshot', async () => {
   const actual = await convertHtmlFile('./tests/vela/input.html', {
-    skipAi: true,
     viewport: { width: 1440, height: 900 },
   });
 

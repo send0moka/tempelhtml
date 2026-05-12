@@ -33,7 +33,6 @@ async function convertAndBuild(payload) {
       html: payload.html,
       sourceName: payload.sourceName || 'inline.html',
       baseUrl: payload.baseUrl || null,
-      skipAi: Boolean(payload.skipAi),
       viewport: payload.viewport || { width: 1440, height: 900 },
     }),
   });
@@ -461,10 +460,6 @@ async function buildFrameNode(spec, parentLayoutMode) {
     applyGridStrategy(frame, spec._gridStrategy);
   }
 
-  if (spec.layoutPositioning === 'ABSOLUTE' && parentLayoutMode !== 'NONE') {
-    frame.layoutPositioning = 'ABSOLUTE';
-  }
-
   if (spec.clipsContent !== undefined) frame.clipsContent = spec.clipsContent;
   if (spec.cornerRadius !== undefined) frame.cornerRadius = spec.cornerRadius;
   if (spec.topLeftRadius !== undefined) {
@@ -488,12 +483,15 @@ async function buildFrameNode(spec, parentLayoutMode) {
     applyBackgroundPattern(frame, spec._backgroundPattern);
   }
 
-  for (const childSpec of (spec.children || [])) {
+  const childSpecs = getPreparedChildSpecs(spec);
+  for (const childSpec of childSpecs) {
     const child = await buildNode(childSpec, frame.layoutMode || 'NONE');
     if (child) {
       frame.appendChild(child);
       if (childSpec.layoutPositioning === 'ABSOLUTE' && frame.layoutMode !== 'NONE') {
-        child.layoutPositioning = 'ABSOLUTE';
+        try {
+          child.layoutPositioning = 'ABSOLUTE';
+        } catch (err) {}
       }
     }
   }
@@ -503,6 +501,102 @@ async function buildFrameNode(spec, parentLayoutMode) {
   }
 
   return frame;
+}
+
+function getPreparedChildSpecs(spec) {
+  const children = Array.isArray(spec.children) ? spec.children : [];
+  if (!spec || !spec._pageLayout || children.length === 0) {
+    return children;
+  }
+
+  const headerBottom = getPageHeaderBottom(children);
+  if (headerBottom <= 0) {
+    return children;
+  }
+
+  const firstFlowTop = getFirstFlowTop(children);
+  if (firstFlowTop === null) {
+    return children;
+  }
+
+  const flowOffset = Math.max(headerBottom - firstFlowTop, 0);
+  if (flowOffset === 0) {
+    return children;
+  }
+
+  const prepared = [];
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index];
+    if (isFlowPageChild(child)) {
+      prepared.push(cloneSpecWithYOffset(child, flowOffset));
+    } else {
+      prepared.push(child);
+    }
+  }
+
+  return prepared;
+}
+
+function getPageHeaderBottom(children) {
+  let bottom = 0;
+  let foundHeader = false;
+
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index];
+    if (!isHeaderRoleSpec(child)) {
+      continue;
+    }
+
+    const childBottom = getSpecBottom(child);
+    if (!foundHeader || childBottom > bottom) {
+      bottom = childBottom;
+    }
+    foundHeader = true;
+  }
+
+  return foundHeader ? bottom : 0;
+}
+
+function getFirstFlowTop(children) {
+  let top = null;
+
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index];
+    if (!isFlowPageChild(child)) {
+      continue;
+    }
+
+    const childTop = Number.isFinite(child.y) ? child.y : 0;
+    if (top === null || childTop < top) {
+      top = childTop;
+    }
+  }
+
+  return top;
+}
+
+function isHeaderRoleSpec(spec) {
+  return Boolean(spec && spec._role === 'header');
+}
+
+function isFlowPageChild(spec) {
+  if (!spec || isHeaderRoleSpec(spec) || spec._isPseudo) {
+    return false;
+  }
+
+  return spec.layoutPositioning !== 'ABSOLUTE';
+}
+
+function getSpecBottom(spec) {
+  const top = Number.isFinite(spec.y) ? spec.y : 0;
+  const height = Number.isFinite(spec.height) ? spec.height : 0;
+  return top + height;
+}
+
+function cloneSpecWithYOffset(spec, offset) {
+  return Object.assign({}, spec, {
+    y: (Number.isFinite(spec.y) ? spec.y : 0) + offset,
+  });
 }
 
 function applyGridStrategy(frame, strategy) {
