@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; padding: 16px; }
+    h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    textarea {
+      width: 100%; height: 120px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;
+      font-family: monospace; font-size: 11px; resize: vertical; margin-bottom: 10px;
+    }
+    button {
+      width: 100%; padding: 10px; background: #18a0fb; color: #fff; border: none;
+      border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    button:hover { background: #0d8de0; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    #status { margin-top: 10px; font-size: 12px; color: #666; line-height: 1.6; }
+    .error { color: #e53e3e; }
+    .success { color: #38a169; }
+    label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+    .note { font-size: 11px; color: #888; margin-top: 6px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h2>tempelhtml — HTML to Figma</h2>
+
+  <label for="jsonInput">Paste tempelhtml JSON output:</label>
+  <textarea id="jsonInput" placeholder='{"version":"0.1.0","figmaTree":[...]}'></textarea>
+
+  <button id="buildBtn" onclick="buildFromJSON()">Build in Figma</button>
+  <p class="note">
+    Run <code>npm run convert -- --input page.html --output out/page.json</code>
+    then paste the JSON content here.
+  </p>
+
+  <div id="status"></div>
+
+  <script>
+    function log(msg, type = '') {
+      const el = document.getElementById('status');
+      el.innerHTML += `<div class="${type}">${msg}</div>`;
+    }
+
+    function buildFromJSON() {
+      const btn = document.getElementById('buildBtn');
+      const raw = document.getElementById('jsonInput').value.trim();
+      document.getElementById('status').innerHTML = '';
+
+      if (!raw) { log('Paste the JSON first.', 'error'); return; }
+
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        log('Invalid JSON: ' + e.message, 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      log('Sending to Figma plugin...');
+      parent.postMessage({ pluginMessage: { type: 'BUILD', data } }, '*');
+    }
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+      if (msg.type === 'PROGRESS') log(msg.text);
+      if (msg.type === 'DONE') {
+        log(`✓ Done! Created ${msg.nodeCount} nodes.`, 'success');
+        document.getElementById('buildBtn').disabled = false;
+      }
+      if (msg.type === 'ERROR') {
+        log('Error: ' + msg.message, 'error');
+        document.getElementById('buildBtn').disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>
