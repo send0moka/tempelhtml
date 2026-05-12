@@ -29,9 +29,10 @@ import { parsePx } from '../utils/units.js';
  */
 export function buildFigmaTree({ annotated }, { pseudoElements = [], gridStrategies = {}, hoverSpecs = {}, fontMap = {} } = {}) {
   attachPseudoElements(annotated, pseudoElements);
+  const normalizedRoot = normalizeRootStructure(annotated);
 
   // Build the main node tree
-  return [buildNode(annotated, null, { fontMap, gridStrategies, hoverSpecs }, '0')];
+  return [buildNode(normalizedRoot, null, { fontMap, gridStrategies, hoverSpecs }, '0')];
 }
 
 function buildNode(node, parentRect, ctx, path) {
@@ -103,8 +104,9 @@ function buildNode(node, parentRect, ctx, path) {
   };
 
   // Apply grid strategy if AI provided one
-  if (isGrid && gridStrategy) {
-    frameNode._gridStrategy = gridStrategy.outerFrame;
+  const renderableGridStrategy = isGrid ? getRenderableGridStrategy(node, gridStrategy) : null;
+  if (renderableGridStrategy) {
+    frameNode._gridStrategy = renderableGridStrategy;
     frameNode._gridNotes = gridStrategy.notes;
   }
 
@@ -170,6 +172,14 @@ function buildPseudoNode(pseudo, path) {
       x: 0, y: 0,
       width: pseudo.width,
       height: pseudo.height,
+      fontName: {
+        family: 'Inter',
+        style: 'Regular',
+      },
+      fontSize: Math.max(Math.min(Math.round(pseudo.height || 16), 48), 12),
+      fills: pseudo.fillColor && pseudo.fillColor !== 'noise-texture'
+        ? [colorSolidPaint(pseudo.fillColor)]
+        : [colorSolidPaint('#ffffff')],
     }] : [],
   };
 }
@@ -231,6 +241,210 @@ function attachPseudoElements(root, pseudoElements) {
     }
     target.pseudoChildren.push(relative);
   }
+}
+
+function normalizeRootStructure(root) {
+  if (!root || root.tag !== 'body' || !Array.isArray(root.children) || root.children.length === 0) {
+    return root;
+  }
+
+  const headerChildren = root.children.filter((child) => isTopHeaderChild(child, root.rect));
+  if (headerChildren.length === 0 || headerChildren.length === root.children.length) {
+    return root;
+  }
+
+  const otherChildren = root.children.filter((child) => !isTopHeaderChild(child, root.rect));
+  const syntheticHeader = buildSyntheticGroup('header', headerChildren);
+  return {
+    ...root,
+    children: [syntheticHeader].concat(otherChildren),
+  };
+}
+
+function isTopHeaderChild(node, rootRect) {
+  if (!node?.rect || !node?.computed) return false;
+
+  const position = node.computed.position;
+  if (position !== 'fixed' && position !== 'absolute') {
+    return false;
+  }
+
+  const nearTop = Math.abs((node.rect.y ?? 0) - (rootRect?.y ?? 0)) <= 8;
+  const wideEnough = (node.rect.width ?? 0) >= Math.max((rootRect?.width ?? 0) * 0.6, 320);
+  const shortEnough = (node.rect.height ?? 0) <= Math.max((rootRect?.height ?? 0) * 0.2, 220);
+  return nearTop && wideEnough && shortEnough;
+}
+
+function buildSyntheticGroup(tag, children) {
+  const rect = unionRects(children.map((child) => child.rect).filter(Boolean));
+  const maxZ = Math.max(...children.map((child) => child.effectiveZ ?? 0), 0);
+
+  return {
+    tag,
+    id: null,
+    classList: [],
+    text: null,
+    textRuns: [],
+    isTextContainer: false,
+    rect,
+    computed: {
+      display: 'block',
+      position: 'static',
+      zIndex: String(maxZ),
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+      flexWrap: 'nowrap',
+      gap: '0px',
+      columnGap: '0px',
+      rowGap: '0px',
+      gridTemplateColumns: 'none',
+      gridTemplateRows: 'none',
+      gridRow: 'auto',
+      gridColumn: 'auto',
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      minWidth: '0px',
+      maxWidth: 'none',
+      minHeight: '0px',
+      paddingTop: '0px',
+      paddingRight: '0px',
+      paddingBottom: '0px',
+      paddingLeft: '0px',
+      marginTop: '0px',
+      marginRight: '0px',
+      marginBottom: '0px',
+      marginLeft: '0px',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      backgroundImage: 'none',
+      backgroundSize: 'auto',
+      backgroundPosition: '0% 0%',
+      color: 'rgba(0, 0, 0, 0)',
+      opacity: '1',
+      borderRadius: '0px',
+      borderTopLeftRadius: '0px',
+      borderTopRightRadius: '0px',
+      borderBottomRightRadius: '0px',
+      borderBottomLeftRadius: '0px',
+      border: '0px none rgba(0, 0, 0, 0)',
+      borderWidth: '0px',
+      borderColor: 'rgba(0, 0, 0, 0)',
+      borderStyle: 'none',
+      boxShadow: 'none',
+      overflow: 'visible',
+      overflowX: 'visible',
+      overflowY: 'visible',
+      mixBlendMode: 'normal',
+      transform: 'none',
+      fontFamily: 'Inter',
+      fontSize: '16px',
+      fontWeight: '400',
+      fontStyle: 'normal',
+      lineHeight: 'normal',
+      letterSpacing: 'normal',
+      textAlign: 'left',
+      textTransform: 'none',
+      whiteSpace: 'normal',
+      textDecoration: 'none',
+      webkitTextStrokeWidth: '0px',
+      webkitTextStrokeColor: 'rgba(0, 0, 0, 0)',
+      top: 'auto',
+      right: 'auto',
+      bottom: 'auto',
+      left: 'auto',
+      inset: 'auto',
+      content: 'none',
+    },
+    pseudo: {
+      before: null,
+      after: null,
+    },
+    children,
+    effectiveZ: maxZ,
+  };
+}
+
+function unionRects(rects) {
+  if (!Array.isArray(rects) || rects.length === 0) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+  return {
+    x: left,
+    y: top,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  };
+}
+
+function getRenderableGridStrategy(node, gridStrategy) {
+  if (!node || !gridStrategy?.outerFrame || !Array.isArray(node.children) || node.children.length < 2) {
+    return null;
+  }
+
+  const axis = detectLinearChildAxis(node.children);
+  if (!axis) {
+    return null;
+  }
+
+  return {
+    ...gridStrategy.outerFrame,
+    layoutMode: axis,
+    itemSpacing: measureAxisSpacing(node.children, axis),
+  };
+}
+
+function detectLinearChildAxis(children) {
+  const tolerance = 8;
+  const xs = groupAxisValues(children.map((child) => child.rect?.x ?? 0), tolerance);
+  const ys = groupAxisValues(children.map((child) => child.rect?.y ?? 0), tolerance);
+
+  if (ys.length === 1 && xs.length > 1) {
+    return 'HORIZONTAL';
+  }
+  if (xs.length === 1 && ys.length > 1) {
+    return 'VERTICAL';
+  }
+  return null;
+}
+
+function groupAxisValues(values, tolerance) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const groups = [];
+
+  for (const value of sorted) {
+    const prev = groups[groups.length - 1];
+    if (prev === undefined || Math.abs(value - prev) > tolerance) {
+      groups.push(value);
+    }
+  }
+
+  return groups;
+}
+
+function measureAxisSpacing(children, axis) {
+  const items = [...children]
+    .filter((child) => child?.rect)
+    .sort((a, b) => axis === 'HORIZONTAL' ? a.rect.x - b.rect.x : a.rect.y - b.rect.y);
+
+  let minGap = null;
+  for (let index = 1; index < items.length; index++) {
+    const prev = items[index - 1].rect;
+    const current = items[index].rect;
+    const gap = axis === 'HORIZONTAL'
+      ? current.x - (prev.x + prev.width)
+      : current.y - (prev.y + prev.height);
+    if (gap < 0) continue;
+    if (minGap === null || gap < minGap) {
+      minGap = gap;
+    }
+  }
+
+  return Math.max(Math.round(minGap ?? 0), 0);
 }
 
 function findBestPseudoParent(node, pseudo) {

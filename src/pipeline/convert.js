@@ -89,12 +89,12 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
     progress(onProgress, 65, 'Skipping AI steps...');
   }
 
-  progress(onProgress, 80, 'Resolving fonts...');
+  progress(onProgress, 78, 'Resolving fonts...');
   const fontMap = await resolveFonts(domTree);
-  progress(onProgress, 90, 'Building Figma tree...');
+  progress(onProgress, 86, 'Building Figma tree...');
   const sorted = sortByZIndex(domTree);
   const figmaTree = buildFigmaTree(sorted, { pseudoElements, gridStrategies, hoverSpecs, fontMap });
-  progress(onProgress, 100, 'Conversion complete');
+  progress(onProgress, 90, 'Snapshot ready. Sending to Figma...');
 
   return {
     version: '0.1.0',

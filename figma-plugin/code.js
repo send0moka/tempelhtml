@@ -94,34 +94,214 @@ function progress(text, percent) {
 // Font pre-loading
 
 async function preloadFonts(nodes) {
-  const needed = new Set();
+  const availableByFamily = await listAvailableFontsByFamily();
+  const cache = {};
 
-  function collectFonts(node) {
-    if (node.fontName) {
-      needed.add(JSON.stringify(node.fontName));
+  async function resolveFontName(font) {
+    const fallback = { family: 'Inter', style: 'Regular' };
+    const requested = normalizeFontName(font) || fallback;
+    const key = JSON.stringify(requested);
+
+    if (cache[key]) {
+      return cache[key];
     }
-    for (const run of (node.textRuns || [])) {
-      if (run.fontName) {
-        needed.add(JSON.stringify(run.fontName));
-      }
-    }
-    for (const child of (node.children || [])) {
-      collectFonts(child);
-    }
+
+    cache[key] = loadBestAvailableFont(requested, availableByFamily)
+      .catch(function () {
+        return fallback;
+      });
+
+    return cache[key];
   }
+
+  await resolveFontName({ family: 'Inter', style: 'Regular' });
 
   for (const node of nodes) {
-    collectFonts(node);
+    await normalizeNodeFonts(node, resolveFontName);
+  }
+}
+
+async function normalizeNodeFonts(node, resolveFontName) {
+  if (node.type === 'TEXT') {
+    node.fontName = await resolveFontName(node.fontName || { family: 'Inter', style: 'Regular' });
+  } else if (node.fontName) {
+    node.fontName = await resolveFontName(node.fontName);
   }
 
-  const fonts = Array.from(needed).map((item) => JSON.parse(item));
-  await Promise.all(
-    fonts.map((font) =>
-      figma.loadFontAsync(font).catch(() =>
-        figma.loadFontAsync({ family: 'Inter', style: 'Regular' })
-      )
-    )
-  );
+  const textRuns = node.textRuns || [];
+  for (let index = 0; index < textRuns.length; index++) {
+    if (textRuns[index] && textRuns[index].fontName) {
+      textRuns[index].fontName = await resolveFontName(textRuns[index].fontName);
+    }
+  }
+
+  const children = node.children || [];
+  for (let index = 0; index < children.length; index++) {
+    await normalizeNodeFonts(children[index], resolveFontName);
+  }
+}
+
+async function listAvailableFontsByFamily() {
+  try {
+    const fonts = await figma.listAvailableFontsAsync();
+    const byFamily = {};
+
+    for (let index = 0; index < fonts.length; index++) {
+      const raw = fonts[index];
+      const font = raw && raw.fontName ? raw.fontName : raw;
+      if (!font || !font.family || !font.style) {
+        continue;
+      }
+
+      if (!byFamily[font.family]) {
+        byFamily[font.family] = [];
+      }
+
+      byFamily[font.family].push({
+        family: font.family,
+        style: font.style,
+      });
+    }
+
+    return byFamily;
+  } catch (err) {
+    return {};
+  }
+}
+
+async function loadBestAvailableFont(requested, availableByFamily) {
+  const candidates = buildFontCandidateList(requested, availableByFamily);
+
+  for (let index = 0; index < candidates.length; index++) {
+    try {
+      await figma.loadFontAsync(candidates[index]);
+      return candidates[index];
+    } catch (err) {}
+  }
+
+  const fallback = { family: 'Inter', style: 'Regular' };
+  await figma.loadFontAsync(fallback);
+  return fallback;
+}
+
+function buildFontCandidateList(requested, availableByFamily) {
+  const candidates = [];
+  const families = [requested.family, 'Inter'];
+
+  for (let familyIndex = 0; familyIndex < families.length; familyIndex++) {
+    const family = families[familyIndex];
+    const pool = availableByFamily[family] || [];
+    if (!pool.length) {
+      continue;
+    }
+
+    const exact = findExactFont(pool, requested.style);
+    if (exact) {
+      pushUniqueFont(candidates, exact);
+    }
+
+    const bestMatch = findClosestFont(pool, requested.style);
+    if (bestMatch) {
+      pushUniqueFont(candidates, bestMatch);
+    }
+
+    const italicMatch = findExactFont(pool, 'Italic');
+    if (italicMatch) {
+      pushUniqueFont(candidates, italicMatch);
+    }
+
+    const regularMatch = findExactFont(pool, 'Regular');
+    if (regularMatch) {
+      pushUniqueFont(candidates, regularMatch);
+    }
+  }
+
+  pushUniqueFont(candidates, { family: 'Inter', style: 'Regular' });
+  return candidates;
+}
+
+function pushUniqueFont(target, font) {
+  const key = JSON.stringify(font);
+  for (let index = 0; index < target.length; index++) {
+    if (JSON.stringify(target[index]) === key) {
+      return;
+    }
+  }
+  target.push(font);
+}
+
+function findExactFont(pool, style) {
+  for (let index = 0; index < pool.length; index++) {
+    if (pool[index].style === style) {
+      return pool[index];
+    }
+  }
+  return null;
+}
+
+function findClosestFont(pool, requestedStyle) {
+  if (!pool.length) {
+    return null;
+  }
+
+  const targetItalic = isItalicStyle(requestedStyle);
+  const sameItalic = [];
+  for (let index = 0; index < pool.length; index++) {
+    if (isItalicStyle(pool[index].style) === targetItalic) {
+      sameItalic.push(pool[index]);
+    }
+  }
+
+  const candidates = sameItalic.length ? sameItalic : pool;
+  let best = candidates[0];
+  let bestScore = fontDistance(requestedStyle, candidates[0].style);
+
+  for (let index = 1; index < candidates.length; index++) {
+    const score = fontDistance(requestedStyle, candidates[index].style);
+    if (score < bestScore) {
+      best = candidates[index];
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
+function fontDistance(targetStyle, candidateStyle) {
+  const italicPenalty = isItalicStyle(targetStyle) === isItalicStyle(candidateStyle) ? 0 : 500;
+  return Math.abs(fontWeightFromStyle(targetStyle) - fontWeightFromStyle(candidateStyle)) + italicPenalty;
+}
+
+function fontWeightFromStyle(style) {
+  const normalized = String(style || '').replace(/\s+Italic$/i, '').trim();
+  const map = {
+    Thin: 100,
+    ExtraLight: 200,
+    Light: 300,
+    Regular: 400,
+    Medium: 500,
+    SemiBold: 600,
+    Bold: 700,
+    ExtraBold: 800,
+    Black: 900,
+  };
+
+  return map[normalized] || 400;
+}
+
+function isItalicStyle(style) {
+  return /italic/i.test(String(style || ''));
+}
+
+function normalizeFontName(font) {
+  if (!font || !font.family) {
+    return null;
+  }
+
+  return {
+    family: font.family,
+    style: font.style || 'Regular',
+  };
 }
 
 // Node builder
@@ -194,15 +374,15 @@ function buildMixedTextGroup(spec) {
 
 function applyBaseTextProps(text, spec) {
   text.name = spec.name;
-  text.characters = spec.characters || '';
   text.x = spec.x || 0;
   text.y = spec.y || 0;
 
-  if (spec.fontName) {
-    try {
-      text.fontName = spec.fontName;
-    } catch (err) {}
-  }
+  const fontName = spec.fontName || { family: 'Inter', style: 'Regular' };
+  try {
+    text.fontName = fontName;
+  } catch (err) {}
+
+  text.characters = spec.characters || '';
   if (spec.fontSize) text.fontSize = spec.fontSize;
   if (spec.fills) text.fills = spec.fills;
   if (spec.opacity !== undefined) text.opacity = spec.opacity;
@@ -331,6 +511,12 @@ function applyGridStrategy(frame, strategy) {
   }
   if (strategy.primaryAxisSizingMode) {
     frame.primaryAxisSizingMode = strategy.primaryAxisSizingMode;
+  }
+  if (strategy.counterAxisSizingMode) {
+    frame.counterAxisSizingMode = strategy.counterAxisSizingMode;
+  }
+  if (strategy.itemSpacing !== undefined) {
+    frame.itemSpacing = strategy.itemSpacing;
   }
 }
 

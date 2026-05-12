@@ -163,9 +163,11 @@ function walkDOMInBrowser() {
       parseFloat(cs.paddingBottom) > 0 ||
       parseFloat(cs.paddingLeft) > 0 ||
       cs.boxShadow !== 'none';
+    const hasOnlyInlineTextChildren = Boolean(rawText) && Array.from(el.children).length > 0 && Array.from(el.children).every((child) => isInlineTextChild(child));
     const isTextContainer = Boolean(rawText) && !hasVisualBox && (
       TEXT_TAGS.has(tag) ||
-      el.children.length === 0
+      el.children.length === 0 ||
+      hasOnlyInlineTextChildren
     );
 
     const textData = rawText ? extractTextData(el) : null;
@@ -348,6 +350,32 @@ function walkDOMInBrowser() {
       .replace(/\r/g, '')
       .replace(/\u00a0/g, ' ')
       .replace(/\s+/g, ' ');
+  }
+
+  function isInlineTextChild(child) {
+    if (!child || child.nodeType !== Node.ELEMENT_NODE) return false;
+    const childTag = child.tagName.toLowerCase();
+    if (!INLINE_TAGS.has(childTag)) return false;
+
+    const childCs = window.getComputedStyle(child);
+    if (childCs.position !== 'static') return false;
+    if (childCs.display !== 'inline' && childCs.display !== 'contents') return false;
+    return !hasVisualBoxForStyles(childCs);
+  }
+
+  function hasVisualBoxForStyles(cs) {
+    return !isTransparentColor(cs.backgroundColor) ||
+      cs.backgroundImage !== 'none' ||
+      cs.borderStyle !== 'none' ||
+      parseFloat(cs.borderTopWidth) > 0 ||
+      parseFloat(cs.borderRightWidth) > 0 ||
+      parseFloat(cs.borderBottomWidth) > 0 ||
+      parseFloat(cs.borderLeftWidth) > 0 ||
+      parseFloat(cs.paddingTop) > 0 ||
+      parseFloat(cs.paddingRight) > 0 ||
+      parseFloat(cs.paddingBottom) > 0 ||
+      parseFloat(cs.paddingLeft) > 0 ||
+      cs.boxShadow !== 'none';
   }
 
 function normalizeTextContent(value) {
