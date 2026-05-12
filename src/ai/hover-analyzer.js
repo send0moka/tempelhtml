@@ -74,17 +74,28 @@ Ignore: animation keyframes (those are not hover states).`,
 
   const text = response.content[0].text.trim();
   try {
-    const clean = text.replace(/```json|```/g, '').trim();
-    const specs = JSON.parse(clean);
+    const specs = extractJsonArray(text);
     const map = {};
     for (const spec of specs) {
       map[spec.selector] = spec;
     }
     return map;
   } catch {
-    console.warn('[hover-analyzer] Failed to parse AI response.');
+    console.warn('[hover-analyzer] Failed to parse AI response. Raw:', text.slice(0, 200));
     return {};
   }
+}
+
+function extractJsonArray(text) {
+  // Strip markdown code fences
+  const stripped = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
+  // Find the outermost JSON array boundaries
+  const start = stripped.indexOf('[');
+  const end = stripped.lastIndexOf(']');
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('No JSON array found in response');
+  }
+  return JSON.parse(stripped.slice(start, end + 1));
 }
 
 /**

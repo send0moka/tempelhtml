@@ -108,6 +108,21 @@
       color: var(--muted);
     }
 
+    .progress {
+      margin-top: 12px;
+      height: 8px;
+      background: #efe5d4;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress > div {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--gold, #e8c97a));
+      transition: width 0.2s linear;
+    }
+
     .check {
       display: flex;
       align-items: center;
@@ -155,7 +170,7 @@
       </div>
       <div>
         <label for="serverInput">Converter URL</label>
-        <input id="serverInput" type="text" value="http://localhost:3210/convert" />
+        <input id="serverInput" type="text" value="http://localhost:3210" />
       </div>
     </div>
 
@@ -177,6 +192,8 @@
 
     <button id="buildBtn" class="primary">Convert & Build</button>
 
+    <div class="progress"><div id="progressFill"></div></div>
+
     <div class="meta">
       <div class="hint">Run <code>npm run server</code> before building.</div>
       <div class="hint">Use <code>Base URL</code> only if your HTML relies on relative assets.</div>
@@ -194,6 +211,7 @@
     const heightInput = document.getElementById('heightInput');
     const skipAiInput = document.getElementById('skipAiInput');
     const buildBtn = document.getElementById('buildBtn');
+    const progressFill = document.getElementById('progressFill');
     const statusEl = document.getElementById('status');
 
     fileInput.addEventListener('change', async () => {
@@ -214,6 +232,7 @@
       }
 
       buildBtn.disabled = true;
+      progressFill.style.width = '0%';
       statusEl.textContent = '';
       log('Sending HTML to the local converter...');
 
@@ -246,8 +265,16 @@
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
-      if (msg.type === 'PROGRESS') log(msg.text);
+      if (msg.type === 'PROGRESS') {
+        if (typeof msg.percent === 'number') {
+          progressFill.style.width = msg.percent + '%';
+          log('[' + msg.percent + '%] ' + msg.text);
+        } else {
+          log(msg.text);
+        }
+      }
       if (msg.type === 'DONE') {
+        progressFill.style.width = '100%';
         log(`Done. Created ${msg.nodeCount} nodes.`, 'success');
         buildBtn.disabled = false;
       }

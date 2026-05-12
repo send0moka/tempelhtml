@@ -19,6 +19,13 @@ import {
   ALIGN_MAP,
 } from '../utils/units.js';
 
+function isTransparentCssColor(value) {
+  if (!value || value === 'transparent' || value === 'none') {
+    return true;
+  }
+  return cssColorToFigma(value).a === 0;
+}
+
 // ─── LAYOUT ──────────────────────────────────────────────────────────────────
 
 /**
@@ -82,7 +89,7 @@ export function mapBorderRadius(computed) {
  */
 export function mapBackgroundColor(computed) {
   const color = computed.backgroundColor;
-  if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return [];
+  if (isTransparentCssColor(color)) return [];
   return [solidPaint(color)];
 }
 
@@ -208,7 +215,7 @@ export function mapTypography(computed, fontMap) {
     textAlignHorizontal: TEXT_ALIGN_MAP[computed.textAlign] ?? 'LEFT',
     textCase: TEXT_CASE_MAP[computed.textTransform] ?? 'ORIGINAL',
     // -webkit-text-stroke → outline text (color: transparent + stroke)
-    fills: computed.color === 'transparent'
+    fills: isTransparentCssColor(computed.color)
       ? []
       : [solidPaint(computed.color)],
   };
@@ -220,7 +227,7 @@ export function mapTypography(computed, fontMap) {
 export function mapTextStroke(computed) {
   // CSS doesn't expose webkit-text-stroke in getComputedStyle reliably,
   // but if fill is transparent we know it's outline text
-  if (computed.color === 'transparent' && computed.webkitTextStrokeWidth) {
+  if (isTransparentCssColor(computed.color) && parsePx(computed.webkitTextStrokeWidth) > 0) {
     const width = parsePx(computed.webkitTextStrokeWidth);
     const color = cssColorToFigma(computed.webkitTextStrokeColor ?? '#000');
     return {

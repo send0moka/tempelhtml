@@ -6,9 +6,11 @@
 
 import 'dotenv/config';
 import http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { convertHtmlString } from '../src/pipeline/convert.js';
 
 const PORT = Number.parseInt(process.env.TEMPELHTML_PORT ?? '3210', 10);
+const jobs = new Map();
 
 const server = http.createServer(async (req, res) => {
   setCors(res);
@@ -22,6 +24,50 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, port: PORT }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/jobs') {
+    try {
+      const body = await readJsonBody(req);
+      if (!body.html || typeof body.html !== 'string') {
+        throw new Error('`html` is required.');
+      }
+
+      const jobId = randomUUID();
+      jobs.set(jobId, {
+        state: 'queued',
+        progress: 0,
+        message: 'Queued',
+        result: null,
+        error: null,
+      });
+
+      runJob(jobId, body).catch((error) => {
+        setJobError(jobId, error);
+      });
+
+      res.writeHead(202, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ jobId }));
+      return;
+    } catch (error) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+      return;
+    }
+  }
+
+  if (req.method === 'GET' && req.url && req.url.startsWith('/jobs/')) {
+    const jobId = req.url.split('/').pop();
+    const job = jobs.get(jobId);
+    if (!job) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Job not found' }));
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(job));
     return;
   }
 
@@ -59,6 +105,45 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`tempelhtml server listening on http://localhost:${PORT}`);
 });
+
+async function runJob(jobId, body) {
+  setJob(jobId, 'running', 1, 'Starting conversion...');
+
+  const result = await convertHtmlString(body.html, {
+    sourceName: body.sourceName || 'inline.html',
+    baseUrl: body.baseUrl || null,
+    skipAi: Boolean(body.skipAi),
+    viewport: {
+      width: body.viewport && body.viewport.width,
+      height: body.viewport && body.viewport.height,
+    },
+    onProgress: (progress, message) => {
+      setJob(jobId, 'running', progress, message);
+    },
+  });
+
+  setJob(jobId, 'done', 100, 'Done', result);
+}
+
+function setJob(jobId, state, progress, message, result) {
+  jobs.set(jobId, {
+    state: state,
+    progress: progress,
+    message: message,
+    result: result || null,
+    error: null,
+  });
+}
+
+function setJobError(jobId, error) {
+  jobs.set(jobId, {
+    state: 'error',
+    progress: 100,
+    message: 'Conversion failed',
+    result: null,
+    error: error && error.message ? error.message : String(error),
+  });
+}
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

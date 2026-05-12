@@ -68,8 +68,7 @@ Respond ONLY with a JSON array, no markdown, no explanation:
 
   const text = response.content[0].text.trim();
   try {
-    const clean = text.replace(/```json|```/g, '').trim();
-    const strategies = JSON.parse(clean);
+    const strategies = extractJsonArray(text);
 
     // Index by selectorHint for easy lookup
     const map = {};
@@ -78,9 +77,21 @@ Respond ONLY with a JSON array, no markdown, no explanation:
     }
     return map;
   } catch {
-    console.warn('[grid-resolver] Failed to parse AI response.');
+    console.warn('[grid-resolver] Failed to parse AI response. Raw:', text.slice(0, 200));
     return {};
   }
+}
+
+function extractJsonArray(text) {
+  // Strip markdown code fences
+  const stripped = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
+  // Find the outermost JSON array boundaries
+  const start = stripped.indexOf('[');
+  const end = stripped.lastIndexOf(']');
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('No JSON array found in response');
+  }
+  return JSON.parse(stripped.slice(start, end + 1));
 }
 
 function deduplicateGridPatterns(gridNodes) {

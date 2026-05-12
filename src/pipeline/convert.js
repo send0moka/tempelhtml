@@ -24,6 +24,7 @@ export async function convertHtmlFile(inputPath, options = {}) {
     source: inputPath,
     viewport,
     skipAi: options.skipAi,
+    onProgress: options.onProgress,
   });
 }
 
@@ -42,10 +43,12 @@ export async function convertHtmlString(html, options = {}) {
     viewport,
     skipAi: options.skipAi,
     baseUrl: options.baseUrl ?? null,
+    onProgress: options.onProgress,
   });
 }
 
-async function convertWithExtractor({ extractor, source, viewport, skipAi = false, baseUrl = null }) {
+async function convertWithExtractor({ extractor, source, viewport, skipAi = false, baseUrl = null, onProgress = null }) {
+  progress(onProgress, 5, 'Extracting page...');
   const { domTree, rawCSS, screenshots } = await extractor();
   const warnings = [];
 
@@ -59,6 +62,7 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
   }
 
   if (aiEnabled) {
+    progress(onProgress, 25, 'Detecting pseudo-elements...');
     pseudoElements = await runAiStep(
       'pseudo-element detection',
       () => detectPseudoElements(screenshots.withPseudo, screenshots.withoutPseudo),
@@ -66,6 +70,7 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
       warnings
     );
 
+    progress(onProgress, 45, 'Resolving CSS grid...');
     gridStrategies = await runAiStep(
       'grid layout resolution',
       () => resolveGridLayouts(rawCSS, domTree),
@@ -73,17 +78,23 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
       warnings
     );
 
+    progress(onProgress, 65, 'Analyzing hover states...');
     hoverSpecs = await runAiStep(
       'hover analysis',
       () => analyzeHoverStates(rawCSS),
       {},
       warnings
     );
+  } else {
+    progress(onProgress, 65, 'Skipping AI steps...');
   }
 
+  progress(onProgress, 80, 'Resolving fonts...');
   const fontMap = await resolveFonts(domTree);
+  progress(onProgress, 90, 'Building Figma tree...');
   const sorted = sortByZIndex(domTree);
   const figmaTree = buildFigmaTree(sorted, { pseudoElements, gridStrategies, hoverSpecs, fontMap });
+  progress(onProgress, 100, 'Conversion complete');
 
   return {
     version: '0.1.0',
@@ -98,6 +109,12 @@ async function convertWithExtractor({ extractor, source, viewport, skipAi = fals
     figmaTree,
     hoverSpecs,
   };
+}
+
+function progress(onProgress, percent, message) {
+  if (typeof onProgress === 'function') {
+    onProgress(percent, message);
+  }
 }
 
 async function runAiStep(label, fn, fallback, warnings) {
