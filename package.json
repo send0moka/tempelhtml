@@ -6,7 +6,9 @@
   "main": "scripts/convert.js",
   "scripts": {
     "convert": "node scripts/convert.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+    "server": "node scripts/server.js",
+    "snapshot:update": "node scripts/update-snapshot.js",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",

@@ -2,77 +2,258 @@
 <html>
 <head>
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f1e8;
+      --panel: #fffaf2;
+      --ink: #1f1b16;
+      --muted: #6f665d;
+      --line: #e6dccd;
+      --accent: #a86f2f;
+      --accent-strong: #7f4e1e;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; padding: 16px; }
-    h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(168, 111, 47, 0.15), transparent 30%),
+        linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+      padding: 16px;
+    }
+
+    h2 {
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(37, 27, 16, 0.06);
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    textarea, input[type="text"], input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+      font: inherit;
+    }
+
     textarea {
-      width: 100%; height: 120px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;
-      font-family: monospace; font-size: 11px; resize: vertical; margin-bottom: 10px;
+      min-height: 180px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      line-height: 1.5;
     }
+
+    .stack { display: grid; gap: 10px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+
     button {
-      width: 100%; padding: 10px; background: #18a0fb; color: #fff; border: none;
-      border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
     }
-    button:hover { background: #0d8de0; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    #status { margin-top: 10px; font-size: 12px; color: #666; line-height: 1.6; }
-    .error { color: #e53e3e; }
-    .success { color: #38a169; }
-    label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; }
-    .note { font-size: 11px; color: #888; margin-top: 6px; line-height: 1.5; }
+
+    .primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:hover { background: var(--accent-strong); }
+    .secondary {
+      background: #f1e7d8;
+      color: var(--ink);
+    }
+
+    .meta {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #status {
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .error { color: #b42318; }
+    .success { color: #1a7f37; }
+    .hint { color: var(--muted); }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <h2>tempelhtml — HTML to Figma</h2>
+  <h2>tempelhtml</h2>
+  <p class="subtle">Paste HTML or upload a `.html` file, then let the local converter build the Figma tree.</p>
 
-  <label for="jsonInput">Paste tempelhtml JSON output:</label>
-  <textarea id="jsonInput" placeholder='{"version":"0.1.0","figmaTree":[...]}'></textarea>
+  <div class="panel stack">
+    <div>
+      <label for="fileInput">HTML file</label>
+      <input id="fileInput" type="file" accept=".html,text/html" />
+    </div>
 
-  <button id="buildBtn" onclick="buildFromJSON()">Build in Figma</button>
-  <p class="note">
-    Run <code>npm run convert -- --input page.html --output out/page.json</code>
-    then paste the JSON content here.
-  </p>
+    <div>
+      <label for="htmlInput">HTML input</label>
+      <textarea id="htmlInput" placeholder="Paste raw HTML here..."></textarea>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="baseUrlInput">Base URL (optional)</label>
+        <input id="baseUrlInput" type="text" placeholder="file:///D:/project/ or https://site.example/" />
+      </div>
+      <div>
+        <label for="serverInput">Converter URL</label>
+        <input id="serverInput" type="text" value="http://localhost:3210/convert" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="widthInput">Viewport width</label>
+        <input id="widthInput" type="number" min="320" step="1" value="1440" />
+      </div>
+      <div>
+        <label for="heightInput">Viewport height</label>
+        <input id="heightInput" type="number" min="320" step="1" value="900" />
+      </div>
+    </div>
+
+    <label class="check">
+      <input id="skipAiInput" type="checkbox" />
+      Skip AI helpers
+    </label>
+
+    <button id="buildBtn" class="primary">Convert & Build</button>
+
+    <div class="meta">
+      <div class="hint">Run <code>npm run server</code> before building.</div>
+      <div class="hint">Use <code>Base URL</code> only if your HTML relies on relative assets.</div>
+    </div>
+  </div>
 
   <div id="status"></div>
 
   <script>
-    function log(msg, type = '') {
-      const el = document.getElementById('status');
-      el.innerHTML += `<div class="${type}">${msg}</div>`;
-    }
+    const fileInput = document.getElementById('fileInput');
+    const htmlInput = document.getElementById('htmlInput');
+    const baseUrlInput = document.getElementById('baseUrlInput');
+    const serverInput = document.getElementById('serverInput');
+    const widthInput = document.getElementById('widthInput');
+    const heightInput = document.getElementById('heightInput');
+    const skipAiInput = document.getElementById('skipAiInput');
+    const buildBtn = document.getElementById('buildBtn');
+    const statusEl = document.getElementById('status');
 
-    function buildFromJSON() {
-      const btn = document.getElementById('buildBtn');
-      const raw = document.getElementById('jsonInput').value.trim();
-      document.getElementById('status').innerHTML = '';
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
 
-      if (!raw) { log('Paste the JSON first.', 'error'); return; }
+      const text = await file.text();
+      htmlInput.value = text;
+      log(`Loaded ${file.name}.`, 'success');
+    });
 
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        log('Invalid JSON: ' + e.message, 'error');
+    buildBtn.addEventListener('click', () => {
+      const html = htmlInput.value.trim();
+      const selectedFile = fileInput.files && fileInput.files[0];
+      if (!html) {
+        log('Paste HTML or choose a file first.', 'error');
         return;
       }
 
-      btn.disabled = true;
-      log('Sending to Figma plugin...');
-      parent.postMessage({ pluginMessage: { type: 'BUILD', data } }, '*');
+      buildBtn.disabled = true;
+      statusEl.textContent = '';
+      log('Sending HTML to the local converter...');
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'CONVERT_AND_BUILD',
+          payload: {
+            html,
+            sourceName: selectedFile ? selectedFile.name : 'inline.html',
+            baseUrl: baseUrlInput.value.trim() || null,
+            serverUrl: serverInput.value.trim() || null,
+            skipAi: skipAiInput.checked,
+            viewport: {
+              width: Number(widthInput.value) || 1440,
+              height: Number(heightInput.value) || 900,
+            },
+          },
+        },
+      }, '*');
+    });
+
+    function log(msg, type = '') {
+      const line = document.createElement('div');
+      if (type) line.className = type;
+      line.textContent = msg;
+      statusEl.appendChild(line);
     }
 
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
+
       if (msg.type === 'PROGRESS') log(msg.text);
       if (msg.type === 'DONE') {
-        log(`✓ Done! Created ${msg.nodeCount} nodes.`, 'success');
-        document.getElementById('buildBtn').disabled = false;
+        log(`Done. Created ${msg.nodeCount} nodes.`, 'success');
+        buildBtn.disabled = false;
       }
       if (msg.type === 'ERROR') {
-        log('Error: ' + msg.message, 'error');
-        document.getElementById('buildBtn').disabled = false;
+        log(`Error: ${msg.message}`, 'error');
+        buildBtn.disabled = false;
       }
     };
   </script>

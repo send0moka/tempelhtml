@@ -4,9 +4,7 @@
  * then uses LLM to generate Figma Component Variant specs.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-
-const client = new Anthropic();
+import { createMessageWithFallback } from './client.js';
 
 /**
  * @param {string} rawCSS - full CSS text from the page
@@ -18,8 +16,7 @@ export async function analyzeHoverStates(rawCSS) {
   const interactiveRules = extractInteractiveRules(rawCSS);
   if (interactiveRules.length === 0) return {};
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const response = await createMessageWithFallback({
     max_tokens: 2000,
     messages: [
       {

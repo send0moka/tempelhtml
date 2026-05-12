@@ -7,9 +7,7 @@
  * that can be used to create manual Figma frames.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-
-const client = new Anthropic();
+import { createMessageWithFallback } from './client.js';
 
 /**
  * @param {Buffer} withPseudo    - screenshot with pseudo-elements visible
@@ -17,8 +15,7 @@ const client = new Anthropic();
  * @returns {Promise<PseudoElement[]>}
  */
 export async function detectPseudoElements(withPseudo, withoutPseudo) {
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const response = await createMessageWithFallback({
     max_tokens: 1500,
     messages: [
       {

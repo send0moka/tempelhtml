@@ -16,10 +16,9 @@ import {
   mapBorder,
   mapBoxShadow,
   mapTypography,
-  mapPositioning,
+  mapTextStroke,
   parseLinearGradient,
 } from './css-to-figma.js';
-import { parsePx, solidPaint } from '../utils/units.js';
 import { solidPaint as colorSolidPaint } from '../utils/color.js';
 
 /**
@@ -29,34 +28,33 @@ import { solidPaint as colorSolidPaint } from '../utils/color.js';
  */
 export function buildFigmaTree({ annotated }, { pseudoElements = [], gridStrategies = {}, hoverSpecs = {}, fontMap = {} } = {}) {
   const nodes = [];
+  let pseudoIndex = 0;
 
   // Add pseudo-element frames (detected by AI)
   for (const pseudo of pseudoElements) {
     if (pseudo.zOrder === 'top') continue; // Add at end
-    nodes.push(buildPseudoNode(pseudo));
+    nodes.push(buildPseudoNode(pseudo, pseudoIndex++));
   }
 
   // Build the main node tree
-  nodes.push(buildNode(annotated, null, { fontMap, gridStrategies, hoverSpecs }));
+  nodes.push(buildNode(annotated, null, { fontMap, gridStrategies, hoverSpecs }, '0'));
 
   // Add top-level pseudo-elements (grain overlays etc.) last
   for (const pseudo of pseudoElements) {
     if (pseudo.zOrder === 'top') {
-      nodes.push(buildPseudoNode(pseudo));
+      nodes.push(buildPseudoNode(pseudo, pseudoIndex++));
     }
   }
 
   return nodes;
 }
 
-function buildNode(node, parentRect, ctx) {
-  const { computed, rect, tag, text, children = [], classList } = node;
-  const isText = tag === 'p' || tag === 'span' || tag === 'h1' || tag === 'h2' ||
-                 tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6' ||
-                 tag === 'a' || tag === 'label' || tag === 'li';
+function buildNode(node, parentRect, ctx, path) {
+  const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer } = node;
+  const isText = Boolean(text) && Boolean(isTextContainer);
 
   const base = {
-    id: `${tag}-${classList?.join('-') ?? 'el'}-${Math.random().toString(36).slice(2, 6)}`,
+    id: buildStableId(tag, classList, path),
     name: buildName(tag, classList),
     type: isText && text ? 'TEXT' : 'FRAME',
     x: Math.round(rect.x - (parentRect?.x ?? 0)),
@@ -70,7 +68,9 @@ function buildNode(node, parentRect, ctx) {
       ...base,
       characters: text,
       ...mapTypography(computed, ctx.fontMap),
-      opacity: parseFloat(computed.opacity ?? 1),
+      ...mapTextStroke(computed),
+      textRuns: buildTextRuns(textRuns, ctx.fontMap),
+      opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
     };
   }
 
@@ -107,7 +107,7 @@ function buildNode(node, parentRect, ctx) {
     ...mapBorderRadius(computed),
     ...mapBorder(computed),
     effects: mapBoxShadow(computed),
-    opacity: parseFloat(computed.opacity ?? 1),
+    opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
     ...(isFlex ? layout : {}),
     ...(isAbsolute ? { layoutPositioning: 'ABSOLUTE' } : {}),
     ...(computed.mixBlendMode && computed.mixBlendMode !== 'normal' ? {
@@ -128,22 +128,23 @@ function buildNode(node, parentRect, ctx) {
 
   // Recurse
   frameNode.children = children
-    .map(child => buildNode(child, rect, ctx))
+    .map((child, index) => buildNode(child, rect, ctx, `${path}.${index}`))
     .filter(Boolean);
 
   return frameNode;
 }
 
-function buildPseudoNode(pseudo) {
+function buildPseudoNode(pseudo, index) {
+  const pseudoId = `pseudo-${index}-${pseudo.name.replace(/\s+/g, '-').toLowerCase()}`;
   return {
-    id: `pseudo-${pseudo.name.replace(/\s+/g, '-')}`,
+    id: pseudoId,
     name: `[pseudo] ${pseudo.name}`,
     type: 'FRAME',
     x: Math.round(pseudo.x),
     y: Math.round(pseudo.y),
     width: Math.round(pseudo.width),
     height: Math.round(pseudo.height),
-    opacity: pseudo.opacity ?? 1,
+    opacity: roundFloat(pseudo.opacity ?? 1),
     fills: pseudo.fillColor && pseudo.fillColor !== 'noise-texture'
       ? [colorSolidPaint(pseudo.fillColor)]
       : [],
@@ -151,7 +152,7 @@ function buildPseudoNode(pseudo) {
     _pseudoType: pseudo.type,
     _pseudoPosition: pseudo.position,
     children: pseudo.content ? [{
-      id: `pseudo-text-${Math.random().toString(36).slice(2)}`,
+      id: `${pseudoId}-content`,
       name: 'content',
       type: 'TEXT',
       characters: pseudo.content,
@@ -165,4 +166,30 @@ function buildPseudoNode(pseudo) {
 function buildName(tag, classList) {
   if (classList?.length > 0) return `${tag}.${classList.slice(0, 2).join('.')}`;
   return tag;
+}
+
+function buildStableId(tag, classList, path) {
+  const slug = (classList?.slice(0, 2).join('-') || 'el')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    || 'el';
+
+  return `${tag}-${slug}-${path.replace(/\./g, '-')}`;
+}
+
+function roundFloat(value, precision = 4) {
+  const factor = 10 ** precision;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function buildTextRuns(runs, fontMap) {
+  return (runs || [])
+    .filter((run) => run && run.text)
+    .map((run) => ({
+      text: run.text,
+      lineIndex: run.lineIndex || 0,
+      ...mapTypography(run.computed, fontMap),
+      ...mapTextStroke(run.computed),
+    }));
 }

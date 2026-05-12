@@ -5,5 +5,11 @@
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
-  "permissions": ["currentuser"]
+  "permissions": ["currentuser"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": [
+      "http://localhost:3210"
+    ]
+  }
 }

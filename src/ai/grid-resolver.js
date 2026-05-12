@@ -7,10 +7,8 @@
  * to avoid per-element overhead.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { findGridNodes } from '../core/dom-tree.js';
-
-const client = new Anthropic();
+import { createMessageWithFallback } from './client.js';
 
 /**
  * @param {string} rawCSS - all CSS from the page
@@ -30,8 +28,7 @@ export async function resolveGridLayouts(rawCSS, domTree) {
     .map((p, i) => `Pattern ${i + 1} (selector hint: .${p.classList[0] ?? 'unknown'}):\n${formatGridCSS(p.computed)}`)
     .join('\n\n');
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  const response = await createMessageWithFallback({
     max_tokens: 1500,
     messages: [
       {
