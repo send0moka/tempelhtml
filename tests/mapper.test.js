@@ -88,6 +88,22 @@ function frameNode({ tag = 'div', classList = [], rect, computed = {}, children 
   };
 }
 
+function textContainerNode({ tag = 'div', classList = [], text, rect, computed = {}, textRuns = [] }) {
+  return {
+    tag,
+    id: null,
+    classList,
+    text,
+    textRuns,
+    isTextContainer: true,
+    rect,
+    computed: baseComputed(computed),
+    pseudo: { before: null, after: null },
+    children: [],
+    effectiveZ: 0,
+  };
+}
+
 test('groups top-level fixed bars into a header frame', () => {
   const nav = frameNode({
     tag: 'nav',
@@ -284,4 +300,173 @@ test('merges full-cover negative z pseudo backgrounds into the parent fill', () 
 
   expect(builtNav.children.some((child) => child.name.includes('[pseudo]'))).toBe(false);
   expect(builtNav.fills[0].type).toBe('GRADIENT_LINEAR');
+});
+
+test('maps centered flex text containers to centered Figma text alignment', () => {
+  const accent = textContainerNode({
+    classList: ['work-accent'],
+    text: 'NOVA',
+    rect: { x: 0, y: 0, width: 810, height: 810 },
+    computed: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      fontFamily: 'Bebas Neue',
+      fontSize: '120px',
+    },
+    textRuns: [{
+      text: 'NOVA',
+      lineIndex: 0,
+      computed: baseComputed({
+        fontFamily: 'Bebas Neue',
+        fontSize: '120px',
+      }),
+    }],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 810, height: 810 },
+    children: [accent],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtAccent = tree.children[0];
+
+  expect(builtAccent.textAlignHorizontal).toBe('CENTER');
+  expect(builtAccent.textAlignVertical).toBe('CENTER');
+});
+
+test('stretches ratio-based work visuals to the full card height', () => {
+  const workAccent = textContainerNode({
+    classList: ['work-accent'],
+    text: 'FORM',
+    rect: { x: 0, y: 0, width: 507, height: 329 },
+    computed: {
+      display: 'flex',
+      position: 'absolute',
+      justifyContent: 'center',
+      alignItems: 'center',
+      fontFamily: 'Bebas Neue',
+      fontSize: '120px',
+      opacity: '0.04',
+      left: '0px',
+      right: '0px',
+      top: '0px',
+      bottom: '0px',
+      inset: '0px',
+    },
+    textRuns: [{
+      text: 'FORM',
+      lineIndex: 0,
+      computed: baseComputed({
+        display: 'flex',
+        position: 'absolute',
+        justifyContent: 'center',
+        alignItems: 'center',
+        fontFamily: 'Bebas Neue',
+        fontSize: '120px',
+        opacity: '0.04',
+      }),
+    }],
+  });
+
+  const workBg = frameNode({
+    tag: 'div',
+    classList: ['work-bg', 'work-bg-2'],
+    rect: { x: 0, y: 0, width: 507, height: 329 },
+    computed: {
+      position: 'absolute',
+      top: '0px',
+      right: '0px',
+      bottom: '0px',
+      left: '0px',
+      inset: '0px',
+      backgroundImage: 'linear-gradient(135deg, rgb(26, 21, 32) 0%, rgb(16, 13, 24) 50%, rgb(13, 12, 10) 100%)',
+    },
+    children: [workAccent],
+  });
+
+  const workTag = textContainerNode({
+    classList: ['work-tag'],
+    text: 'WEB DESIGN',
+    rect: { x: 36, y: 253.25, width: 435, height: 13 },
+    computed: {
+      fontFamily: 'DM Sans',
+      fontSize: '10px',
+      letterSpacing: '2.5px',
+      textTransform: 'uppercase',
+    },
+    textRuns: [{
+      text: 'WEB DESIGN',
+      lineIndex: 0,
+      computed: baseComputed({
+        fontFamily: 'DM Sans',
+        fontSize: '10px',
+        letterSpacing: '2.5px',
+        textTransform: 'uppercase',
+      }),
+    }],
+  });
+
+  const workInfo = frameNode({
+    tag: 'div',
+    classList: ['work-info'],
+    rect: { x: 0, y: 223.25, width: 507, height: 106 },
+    computed: {
+      position: 'absolute',
+      top: '223.25px',
+      right: '0px',
+      bottom: '0px',
+      left: '0px',
+      inset: '223.25px 0px 0px',
+      paddingTop: '30px',
+      paddingRight: '36px',
+      paddingBottom: '30px',
+      paddingLeft: '36px',
+      backgroundImage: 'linear-gradient(to top, rgba(13, 12, 10, 0.9) 0%, rgba(0, 0, 0, 0) 100%)',
+    },
+    children: [workTag],
+  });
+
+  const workVisual = frameNode({
+    tag: 'div',
+    classList: ['work-visual'],
+    rect: { x: 0, y: 0, width: 507, height: 329 },
+    computed: {
+      position: 'relative',
+      paddingBottom: '329.25px',
+      overflow: 'hidden',
+    },
+    children: [workBg, workInfo],
+  });
+
+  const workCard = frameNode({
+    tag: 'div',
+    classList: ['work-card'],
+    rect: { x: 0, y: 0, width: 507, height: 404 },
+    computed: {
+      position: 'relative',
+      overflow: 'hidden',
+      backgroundColor: 'rgb(21, 20, 16)',
+    },
+    children: [workVisual],
+  });
+
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 507, height: 404 },
+    children: [workCard],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtCard = tree.children[0];
+  const builtVisual = builtCard.children[0];
+  const builtBg = builtVisual.children[0];
+  const builtInfo = builtVisual.children[1];
+  const builtTag = builtInfo.children[0];
+
+  expect(builtVisual.height).toBe(404);
+  expect(builtBg.height).toBe(404);
+  expect(builtInfo.y).toBe(298);
+  expect(builtTag.y).toBe(30);
 });

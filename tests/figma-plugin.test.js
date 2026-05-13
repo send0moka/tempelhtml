@@ -95,6 +95,24 @@ function frameSpec(name, overrides = {}) {
   };
 }
 
+function textSpec(name, overrides = {}) {
+  return {
+    name,
+    type: 'TEXT',
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+    characters: '',
+    fontName: { family: 'Inter', style: 'Regular' },
+    fontSize: 16,
+    lineHeight: { unit: 'AUTO' },
+    textAlignHorizontal: 'LEFT',
+    fills: [],
+    ...overrides,
+  };
+}
+
 test('fixes only the auto-layout axis that needs rendered free space', async () => {
   const { figma, page } = createFigmaMock();
   const context = {
@@ -155,4 +173,142 @@ test('fixes only the auto-layout axis that needs rendered free space', async () 
   expect(nav.counterAxisSizingMode).toBeUndefined();
   expect(builtNavLinks.primaryAxisSizingMode).toBeUndefined();
   expect(builtNavLinks.layoutSizingHorizontal).toBeUndefined();
+});
+
+test('uses width-and-height auto resize for explicit multiline text', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      {
+        name: 'h2.section-title',
+        type: 'TEXT',
+        x: 0,
+        y: 0,
+        width: 230,
+        height: 123,
+        characters: 'Layanan\nUnggulan',
+        fontName: { family: 'Playfair Display', style: 'Bold' },
+        fontSize: 56,
+        fills: [],
+      },
+    ],
+  });
+
+  const title = page.children[0];
+  expect(title.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+  expect(title.width).toBe(0);
+});
+
+test('keeps centered flex text boxes fixed so vertical middle alignment can apply', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      {
+        name: 'div.work-accent',
+        type: 'TEXT',
+        x: 0,
+        y: 0,
+        width: 810,
+        height: 810,
+        characters: 'NOVA',
+        fontName: { family: 'Bebas Neue', style: 'Regular' },
+        fontSize: 120,
+        textAlignHorizontal: 'CENTER',
+        textAlignVertical: 'CENTER',
+        fills: [],
+      },
+    ],
+  });
+
+  const accent = page.children[0];
+  expect(accent.textAutoResize).toBe('NONE');
+  expect(accent.textAlignHorizontal).toBe('CENTER');
+  expect(accent.textAlignVertical).toBe('CENTER');
+});
+
+test('auto-sizes rendered single-line text without class-specific widths', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      frameSpec('div.author-avatar', {
+        width: 46,
+        height: 46,
+        layoutMode: 'HORIZONTAL',
+        primaryAxisAlignItems: 'CENTER',
+        counterAxisAlignItems: 'CENTER',
+        children: [
+          textSpec('span', {
+            width: 12,
+            height: 21,
+            characters: 'AR',
+            textAlignHorizontal: 'CENTER',
+          }),
+        ],
+      }),
+      frameSpec('div.author-info', {
+        width: 110,
+        height: 16,
+        children: [
+          textSpec('div.author-role', {
+            width: 110,
+            height: 16,
+            characters: 'CEO, Nusantara Collective',
+            fontSize: 12,
+          }),
+        ],
+      }),
+      textSpec('div.testimonial-stars', {
+        width: 800,
+        height: 19,
+        characters: '★★★★★',
+        textAlignHorizontal: 'CENTER',
+        fontSize: 14,
+      }),
+    ],
+  });
+
+  const initials = page.children[0].children[0];
+  const role = page.children[1].children[0];
+  const centeredBoxText = page.children[2];
+
+  expect(initials.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+  expect(role.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+  expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
+  expect(centeredBoxText.width).toBe(800);
 });

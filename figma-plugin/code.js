@@ -1142,12 +1142,12 @@ function cloneValue(value) {
 
 async function buildNode(spec, parentLayoutMode, styleRegistry) {
   if (spec.type === 'TEXT') {
-    return await buildTextNode(spec, styleRegistry);
+    return await buildTextNode(spec, parentLayoutMode, styleRegistry);
   }
   return buildFrameNode(spec, parentLayoutMode, styleRegistry);
 }
 
-async function buildTextNode(spec, styleRegistry) {
+async function buildTextNode(spec, parentLayoutMode, styleRegistry) {
   const textRuns = getAlignedTextRuns(spec);
 
   if (hasOutlineRuns(textRuns)) {
@@ -1158,7 +1158,7 @@ async function buildTextNode(spec, styleRegistry) {
   applyBaseTextProps(text, spec);
   applyTextRunStyles(text, textRuns);
   await applyTextStyleIds(text, spec, textRuns, styleRegistry);
-  applyTextSizing(text, spec);
+  applyTextSizing(text, spec, parentLayoutMode);
   return text;
 }
 
@@ -1243,6 +1243,7 @@ function applyBaseTextProps(text, spec) {
   if (spec.lineHeight) text.lineHeight = spec.lineHeight;
   if (spec.letterSpacing) text.letterSpacing = spec.letterSpacing;
   if (spec.textAlignHorizontal) text.textAlignHorizontal = spec.textAlignHorizontal;
+  if (spec.textAlignVertical) text.textAlignVertical = spec.textAlignVertical;
   if (spec.textCase) text.textCase = spec.textCase;
   if (spec.strokes) {
     text.strokes = spec.strokes;
@@ -1279,12 +1280,64 @@ function applyTextRunStyles(text, runs) {
   }
 }
 
-function applyTextSizing(text, spec) {
+function applyTextSizing(text, spec, parentLayoutMode) {
   if (!spec.width) return;
   try {
+    if (hasExplicitLineBreaks(spec.characters)) {
+      text.textAutoResize = 'WIDTH_AND_HEIGHT';
+      return;
+    }
+
+    if (hasFixedTextBoxAlignment(spec)) {
+      text.textAutoResize = 'NONE';
+      text.resize(Math.max(spec.width, 1), Math.max(spec.height || 1, 1));
+      return;
+    }
+
+    if (shouldAutoSizeSingleLineText(spec, parentLayoutMode)) {
+      text.textAutoResize = 'WIDTH_AND_HEIGHT';
+      return;
+    }
+
     text.textAutoResize = 'HEIGHT';
     text.resize(Math.max(spec.width, 1), Math.max(spec.height || 1, 1));
   } catch (err) {}
+}
+
+function hasExplicitLineBreaks(characters) {
+  return String(characters || '').includes('\n');
+}
+
+function hasFixedTextBoxAlignment(spec) {
+  return spec.textAlignVertical && spec.textAlignVertical !== 'TOP';
+}
+
+function shouldAutoSizeSingleLineText(spec, parentLayoutMode) {
+  if (!isRenderedSingleLineText(spec)) {
+    return false;
+  }
+
+  if (parentLayoutMode && parentLayoutMode !== 'NONE') {
+    return true;
+  }
+
+  const align = String(spec.textAlignHorizontal || 'LEFT').toUpperCase();
+  return align === 'LEFT';
+}
+
+function isRenderedSingleLineText(spec) {
+  const characters = String(spec.characters || '').trim();
+  if (!characters || hasExplicitLineBreaks(characters)) {
+    return false;
+  }
+
+  const height = pickNumber(spec.height, 0);
+  const lineHeight = getLineHeightPx(spec.lineHeight, spec.fontSize || 16);
+  if (height <= 0 || lineHeight <= 0) {
+    return false;
+  }
+
+  return height <= Math.max(lineHeight * 1.4, lineHeight + 4);
 }
 
 async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {

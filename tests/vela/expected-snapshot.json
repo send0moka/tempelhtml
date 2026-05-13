@@ -4864,6 +4864,7 @@
                       "opacity": 1
                     }
                   ],
+                  "textAlignVertical": "CENTER",
                   "textRuns": [
                     {
                       "text": "Semua Layanan →",
@@ -6382,6 +6383,7 @@
                       "opacity": 1
                     }
                   ],
+                  "textAlignVertical": "CENTER",
                   "textRuns": [
                     {
                       "text": "Semua Karya →",
@@ -6566,7 +6568,7 @@
                                 "value": 6,
                                 "unit": "PIXELS"
                               },
-                              "textAlignHorizontal": "LEFT",
+                              "textAlignHorizontal": "CENTER",
                               "textCase": "ORIGINAL",
                               "fills": [
                                 {
@@ -6579,6 +6581,7 @@
                                   "opacity": 1
                                 }
                               ],
+                              "textAlignVertical": "CENTER",
                               "textRuns": [
                                 {
                                   "text": "NOVA",
@@ -6844,7 +6847,7 @@
                       "x": 0,
                       "y": 0,
                       "width": 507,
-                      "height": 329,
+                      "height": 404,
                       "fills": [],
                       "paddingTop": 0,
                       "paddingRight": 0,
@@ -6862,7 +6865,7 @@
                           "x": 0,
                           "y": 0,
                           "width": 507,
-                          "height": 329,
+                          "height": 404,
                           "fills": [
                             {
                               "type": "GRADIENT_LINEAR",
@@ -6926,7 +6929,7 @@
                               "x": 0,
                               "y": 0,
                               "width": 507,
-                              "height": 329,
+                              "height": 404,
                               "characters": "FORM",
                               "fontName": {
                                 "family": "Bebas Neue",
@@ -6940,7 +6943,7 @@
                                 "value": 6,
                                 "unit": "PIXELS"
                               },
-                              "textAlignHorizontal": "LEFT",
+                              "textAlignHorizontal": "CENTER",
                               "textCase": "ORIGINAL",
                               "fills": [
                                 {
@@ -6953,6 +6956,7 @@
                                   "opacity": 1
                                 }
                               ],
+                              "textAlignVertical": "CENTER",
                               "textRuns": [
                                 {
                                   "text": "FORM",
@@ -6993,7 +6997,7 @@
                           "name": "div.work-info",
                           "type": "FRAME",
                           "x": 0,
-                          "y": 223,
+                          "y": 298,
                           "width": 507,
                           "height": 106,
                           "fills": [
@@ -7218,7 +7222,7 @@
                       "x": 0,
                       "y": 0,
                       "width": 507,
-                      "height": 329,
+                      "height": 404,
                       "fills": [],
                       "paddingTop": 0,
                       "paddingRight": 0,
@@ -7236,7 +7240,7 @@
                           "x": 0,
                           "y": 0,
                           "width": 507,
-                          "height": 329,
+                          "height": 404,
                           "fills": [
                             {
                               "type": "GRADIENT_LINEAR",
@@ -7300,7 +7304,7 @@
                               "x": 0,
                               "y": 0,
                               "width": 507,
-                              "height": 329,
+                              "height": 404,
                               "characters": "SAVI",
                               "fontName": {
                                 "family": "Bebas Neue",
@@ -7314,7 +7318,7 @@
                                 "value": 6,
                                 "unit": "PIXELS"
                               },
-                              "textAlignHorizontal": "LEFT",
+                              "textAlignHorizontal": "CENTER",
                               "textCase": "ORIGINAL",
                               "fills": [
                                 {
@@ -7327,6 +7331,7 @@
                                   "opacity": 1
                                 }
                               ],
+                              "textAlignVertical": "CENTER",
                               "textRuns": [
                                 {
                                   "text": "SAVI",
@@ -7367,7 +7372,7 @@
                           "name": "div.work-info",
                           "type": "FRAME",
                           "x": 0,
-                          "y": 223,
+                          "y": 298,
                           "width": 507,
                           "height": 106,
                           "fills": [

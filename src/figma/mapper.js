@@ -36,8 +36,10 @@ export function buildFigmaTree({ annotated }, { pseudoElements = [], gridStrateg
   return [buildNode(normalizedRoot, null, { fontMap, gridStrategies, hoverSpecs }, '0')];
 }
 
-function buildNode(node, parentRect, ctx, path) {
+function buildNode(node, parentContext, ctx, path) {
   const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer, _pageLayout, _role } = node;
+  const resolvedRect = resolveRenderedRect(node, parentContext);
+  const parentResolvedRect = parentContext?.resolvedRect ?? null;
   const isLeafText = Boolean(text) && children.length === 0;
   const isText = isLeafText && Boolean(isTextContainer);
 
@@ -45,10 +47,10 @@ function buildNode(node, parentRect, ctx, path) {
     id: buildStableId(tag, classList, path),
     name: buildName(tag, classList),
     type: isText && text ? 'TEXT' : 'FRAME',
-    x: Math.round(rect.x - (parentRect?.x ?? 0)),
-    y: Math.round(rect.y - (parentRect?.y ?? 0)),
-    width: Math.round(rect.width),
-    height: Math.round(rect.height),
+    x: Math.round(resolvedRect.x - (parentResolvedRect?.x ?? 0)),
+    y: Math.round(resolvedRect.y - (parentResolvedRect?.y ?? 0)),
+    width: Math.round(resolvedRect.width),
+    height: Math.round(resolvedRect.height),
   };
 
   if (base.type === 'TEXT') {
@@ -56,6 +58,7 @@ function buildNode(node, parentRect, ctx, path) {
       ...base,
       characters: text,
       ...mapTypography(computed, ctx.fontMap),
+      ...mapFlexTextAlignment(computed),
       ...mapTextStroke(computed),
       textRuns: buildTextRuns(textRuns, ctx.fontMap),
       opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
@@ -125,7 +128,7 @@ function buildNode(node, parentRect, ctx, path) {
   const childNodes = [];
 
   if (isLeafText) {
-    childNodes.push(buildEmbeddedTextNode(node, ctx, `${path}.text`));
+    childNodes.push(buildEmbeddedTextNode(node, ctx, `${path}.text`, resolvedRect));
   }
 
   const pseudoChildren = (node.pseudoChildren || []).concat(getNativePseudoChildren(node));
@@ -153,7 +156,7 @@ function buildNode(node, parentRect, ctx, path) {
     .concat(childNodes)
     .concat(
       children
-        .map((child, index) => buildNode(child, rect, ctx, `${path}.${index}`))
+        .map((child, index) => buildNode(child, { sourceRect: rect, resolvedRect }, ctx, `${path}.${index}`))
         .filter(Boolean)
     )
     .concat(pseudoTop);
@@ -163,6 +166,117 @@ function buildNode(node, parentRect, ctx, path) {
   }
 
   return frameNode;
+}
+
+function resolveRenderedRect(node, parentContext) {
+  const sourceRect = node?.rect || { x: 0, y: 0, width: 0, height: 0 };
+  if (!parentContext?.sourceRect || !parentContext?.resolvedRect) {
+    return sourceRect;
+  }
+
+  const resolved = reprojectRectWithinParent(sourceRect, parentContext.sourceRect, parentContext.resolvedRect);
+  if (shouldStretchAspectWrapper(node, parentContext)) {
+    return {
+      ...resolved,
+      width: parentContext.resolvedRect.width,
+      height: parentContext.resolvedRect.height,
+      x: parentContext.resolvedRect.x + (sourceRect.x - parentContext.sourceRect.x),
+      y: parentContext.resolvedRect.y + (sourceRect.y - parentContext.sourceRect.y),
+    };
+  }
+
+  return resolved;
+}
+
+function reprojectRectWithinParent(childRect, sourceParentRect, resolvedParentRect) {
+  const rect = childRect || { x: 0, y: 0, width: 0, height: 0 };
+  const sourceParent = sourceParentRect || { x: 0, y: 0, width: 0, height: 0 };
+  const resolvedParent = resolvedParentRect || sourceParent;
+  const tolerance = 1.5;
+
+  if (isSameRect(sourceParent, resolvedParent)) {
+    return rect;
+  }
+
+  const leftOffset = (rect.x ?? 0) - (sourceParent.x ?? 0);
+  const topOffset = (rect.y ?? 0) - (sourceParent.y ?? 0);
+  const rightOffset = (sourceParent.x ?? 0) + (sourceParent.width ?? 0) - ((rect.x ?? 0) + (rect.width ?? 0));
+  const bottomOffset = (sourceParent.y ?? 0) + (sourceParent.height ?? 0) - ((rect.y ?? 0) + (rect.height ?? 0));
+
+  const fillsHorizontal = isClose(leftOffset, 0, tolerance)
+    && isClose(rightOffset, 0, tolerance)
+    && isClose(rect.width ?? 0, sourceParent.width ?? 0, tolerance);
+  const fillsVertical = isClose(topOffset, 0, tolerance)
+    && isClose(bottomOffset, 0, tolerance)
+    && isClose(rect.height ?? 0, sourceParent.height ?? 0, tolerance);
+
+  const width = fillsHorizontal ? resolvedParent.width : rect.width;
+  const height = fillsVertical ? resolvedParent.height : rect.height;
+
+  const x = fillsHorizontal
+    ? resolvedParent.x + leftOffset
+    : (rightOffset < leftOffset
+      ? resolvedParent.x + resolvedParent.width - rightOffset - width
+      : resolvedParent.x + leftOffset);
+
+  const y = fillsVertical
+    ? resolvedParent.y + topOffset
+    : (bottomOffset < topOffset
+      ? resolvedParent.y + resolvedParent.height - bottomOffset - height
+      : resolvedParent.y + topOffset);
+
+  return {
+    x,
+    y,
+    width,
+    height,
+  };
+}
+
+function shouldStretchAspectWrapper(node, parentContext) {
+  if (!node?.rect || !parentContext?.sourceRect || !parentContext?.resolvedRect) {
+    return false;
+  }
+
+  if (node.computed?.position === 'absolute' || node.computed?.position === 'fixed') {
+    return false;
+  }
+
+  if (parsePx(node.computed?.paddingBottom) <= 0) {
+    return false;
+  }
+
+  if (!Array.isArray(node.children) || node.children.length === 0) {
+    return false;
+  }
+
+  if (node.children.some((child) => !isAbsoluteLikeNode(child))) {
+    return false;
+  }
+
+  if (node.pseudoChildren?.length > 0 || node?.pseudo?.before || node?.pseudo?.after) {
+    return false;
+  }
+
+  const sourceRect = node.rect;
+  const parentRect = parentContext.sourceRect;
+  const widthMatches = isClose(sourceRect.width, parentRect.width, 2);
+  const xMatches = isClose(sourceRect.x, parentRect.x, 2);
+  const yMatches = isClose(sourceRect.y, parentRect.y, 2);
+  const isShorter = sourceRect.height + 2 < parentRect.height;
+
+  return widthMatches && xMatches && yMatches && isShorter;
+}
+
+function isClose(a, b, tolerance = 1.5) {
+  return Math.abs((a ?? 0) - (b ?? 0)) <= tolerance;
+}
+
+function isSameRect(a, b, tolerance = 0.01) {
+  return isClose(a?.x, b?.x, tolerance)
+    && isClose(a?.y, b?.y, tolerance)
+    && isClose(a?.width, b?.width, tolerance)
+    && isClose(a?.height, b?.height, tolerance);
 }
 
 function getNativePseudoChildren(node) {
@@ -336,12 +450,13 @@ function roundFloat(value, precision = 4) {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-function buildEmbeddedTextNode(node, ctx, path) {
+function buildEmbeddedTextNode(node, ctx, path, resolvedRect = null) {
   const { computed, rect, tag, text, textRuns = [], classList } = node;
   const insetX = parsePx(computed.paddingLeft);
   const insetY = parsePx(computed.paddingTop);
-  const width = Math.max(Math.round(rect.width - insetX - parsePx(computed.paddingRight)), 1);
-  const height = Math.max(Math.round(rect.height - insetY - parsePx(computed.paddingBottom)), 1);
+  const sourceRect = resolvedRect || rect;
+  const width = Math.max(Math.round(sourceRect.width - insetX - parsePx(computed.paddingRight)), 1);
+  const height = Math.max(Math.round(sourceRect.height - insetY - parsePx(computed.paddingBottom)), 1);
 
   return {
     id: buildStableId(tag, classList, `${path}-inner`),
@@ -353,6 +468,7 @@ function buildEmbeddedTextNode(node, ctx, path) {
     height,
     characters: text,
     ...mapTypography(computed, ctx.fontMap),
+    ...mapFlexTextAlignment(computed),
     ...mapTextStroke(computed),
     textRuns: buildTextRuns(textRuns, ctx.fontMap),
   };
@@ -728,6 +844,53 @@ function buildTextRuns(runs, fontMap) {
       ...mapTypography(run.computed, fontMap),
       ...mapTextStroke(run.computed),
     }));
+}
+
+function mapFlexTextAlignment(computed) {
+  if (!computed || (computed.display !== 'flex' && computed.display !== 'inline-flex')) {
+    return {};
+  }
+
+  const isRow = computed.flexDirection !== 'column' && computed.flexDirection !== 'column-reverse';
+  const primary = mapFlexTextAxisAlignment(computed.justifyContent, 'primary');
+  const counter = mapFlexTextAxisAlignment(computed.alignItems, 'counter');
+  const result = {};
+
+  if (isRow) {
+    if (primary.horizontal) result.textAlignHorizontal = primary.horizontal;
+    if (counter.vertical) result.textAlignVertical = counter.vertical;
+  } else {
+    if (counter.horizontal) result.textAlignHorizontal = counter.horizontal;
+    if (primary.vertical) result.textAlignVertical = primary.vertical;
+  }
+
+  return result;
+}
+
+function mapFlexTextAxisAlignment(value, axisRole) {
+  const normalized = String(value || '').toLowerCase();
+  const horizontalMap = {
+    center: 'CENTER',
+    'flex-start': 'LEFT',
+    start: 'LEFT',
+    left: 'LEFT',
+    'flex-end': 'RIGHT',
+    end: 'RIGHT',
+    right: 'RIGHT',
+  };
+  const verticalMap = {
+    center: 'CENTER',
+    'flex-start': 'TOP',
+    start: 'TOP',
+    'flex-end': 'BOTTOM',
+    end: 'BOTTOM',
+  };
+
+  return {
+    horizontal: horizontalMap[normalized] || null,
+    vertical: verticalMap[normalized] || null,
+    axisRole,
+  };
 }
 
 function detectBackgroundPattern(computed) {
