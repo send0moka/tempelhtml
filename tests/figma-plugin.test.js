@@ -312,3 +312,64 @@ test('auto-sizes rendered single-line text without class-specific widths', async
   expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
   expect(centeredBoxText.width).toBe(800);
 });
+
+test('extends page-layout height when fixed header content is offset down', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      frameSpec('body', {
+        width: 1440,
+        height: 450,
+        _pageLayout: true,
+        clipsContent: true,
+        children: [
+          frameSpec('nav', {
+            _role: 'header',
+            x: 0,
+            y: 0,
+            width: 1440,
+            height: 90,
+            layoutMode: 'HORIZONTAL',
+            primaryAxisAlignItems: 'SPACE_BETWEEN',
+            counterAxisAlignItems: 'CENTER',
+          }),
+          frameSpec('section.hero', {
+            x: 0,
+            y: 0,
+            width: 1440,
+            height: 360,
+          }),
+          frameSpec('div.footer-bottom', {
+            x: 0,
+            y: 360,
+            width: 1440,
+            height: 90,
+            layoutMode: 'HORIZONTAL',
+            primaryAxisAlignItems: 'SPACE_BETWEEN',
+            counterAxisAlignItems: 'CENTER',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const body = page.children[0];
+  const footerBottom = body.children[2];
+
+  expect(body.height).toBe(540);
+  expect(body.clipsContent).toBe(true);
+  expect(body.children[1].y).toBe(90);
+  expect(footerBottom.y).toBe(450);
+});

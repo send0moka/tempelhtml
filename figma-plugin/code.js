@@ -1341,9 +1341,13 @@ function isRenderedSingleLineText(spec) {
 }
 
 async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
+  const preparedLayout = getPreparedPageLayout(spec);
   const frame = figma.createFrame();
   frame.name = spec.name;
-  frame.resize(Math.max(spec.width || 100, 1), Math.max(spec.height || 100, 1));
+  frame.resize(
+    Math.max(spec.width || 100, 1),
+    Math.max((spec.height || 100) + preparedLayout.flowOffset, 1)
+  );
   frame.x = spec.x || 0;
   frame.y = spec.y || 0;
 
@@ -1395,7 +1399,7 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
 
   await applyPaintStyleIds(frame, spec, styleRegistry);
 
-  const childSpecs = getPreparedChildSpecs(spec);
+  const childSpecs = preparedLayout.children;
   for (const childSpec of childSpecs) {
     const child = await buildNode(childSpec, frame.layoutMode || 'NONE', styleRegistry);
     if (child) {
@@ -1419,24 +1423,28 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
 }
 
 function getPreparedChildSpecs(spec) {
+  return getPreparedPageLayout(spec).children;
+}
+
+function getPreparedPageLayout(spec) {
   const children = Array.isArray(spec.children) ? spec.children : [];
   if (!spec || !spec._pageLayout || children.length === 0) {
-    return children;
+    return { children, flowOffset: 0 };
   }
 
   const headerBottom = getPageHeaderBottom(children);
   if (headerBottom <= 0) {
-    return children;
+    return { children, flowOffset: 0 };
   }
 
   const firstFlowTop = getFirstFlowTop(children);
   if (firstFlowTop === null) {
-    return children;
+    return { children, flowOffset: 0 };
   }
 
   const flowOffset = Math.max(headerBottom - firstFlowTop, 0);
   if (flowOffset === 0) {
-    return children;
+    return { children, flowOffset: 0 };
   }
 
   const prepared = [];
@@ -1449,7 +1457,7 @@ function getPreparedChildSpecs(spec) {
     }
   }
 
-  return prepared;
+  return { children: prepared, flowOffset };
 }
 
 function getPageHeaderBottom(children) {
