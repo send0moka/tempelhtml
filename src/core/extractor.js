@@ -149,9 +149,15 @@ function walkDOMInBrowser() {
       parseFloat(cs.paddingLeft) > 0 ||
       cs.boxShadow !== 'none';
     const hasOnlyInlineTextChildren = Boolean(rawText) && Array.from(el.children).length > 0 && Array.from(el.children).every((child) => isInlineTextChild(child));
-    const isTextContainer = Boolean(rawText) && !hasVisualBox && canCollapseToTextContainer(el, tag, cs, hasOnlyInlineTextChildren);
+    const isTextContainer = Boolean(rawText)
+      && !hasVisualBox
+      && !hasRenderablePseudo(csBefore)
+      && !hasRenderablePseudo(csAfter)
+      && canCollapseToTextContainer(el, tag, cs, hasOnlyInlineTextChildren);
 
     const textData = rawText ? extractTextData(el) : null;
+    const beforeData = extractPseudoElementData(el, tag, cs, csBefore, 'before');
+    const afterData = extractPseudoElementData(el, tag, cs, csAfter, 'after');
 
     const children = isTextContainer
       ? []
@@ -169,8 +175,8 @@ function walkDOMInBrowser() {
       rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       computed: extractRelevantStyles(cs),
       pseudo: {
-        before: csBefore.content !== 'none' ? extractRelevantStyles(csBefore) : null,
-        after: csAfter.content !== 'none' ? extractRelevantStyles(csAfter) : null,
+        before: beforeData,
+        after: afterData,
       },
       children,
     };
@@ -413,17 +419,163 @@ function walkDOMInBrowser() {
       cs.boxShadow !== 'none';
   }
 
+  function hasRenderablePseudo(cs) {
+    if (!cs || cs.content === 'none' || cs.content === 'normal') {
+      return false;
+    }
+
+    return parseCssContent(cs.content) !== '' || hasSupportedPseudoVisual(cs);
+  }
+
+  function extractPseudoElementData(el, tag, parentStyles, pseudoStyles, pseudoType) {
+    if (!hasRenderablePseudo(pseudoStyles)) {
+      return null;
+    }
+
+    const content = parseCssContent(pseudoStyles.content);
+    if (!content && !hasSupportedPseudoVisual(pseudoStyles)) {
+      return null;
+    }
+
+    const rect = estimatePseudoTextRect(el, parentStyles, pseudoStyles, pseudoType);
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+
+    return {
+      name: `${buildPseudoName(el, tag)}::${pseudoType}`,
+      type: content ? 'text' : 'box',
+      content: content || null,
+      rect,
+      fillColor: pseudoStyles.color,
+      opacity: Number.isFinite(parseFloat(pseudoStyles.opacity)) ? parseFloat(pseudoStyles.opacity) : 1,
+      position: pseudoStyles.position,
+      zOrder: resolvePseudoZOrder(pseudoStyles, pseudoType),
+      computed: extractRelevantStyles(pseudoStyles),
+    };
+  }
+
+  function resolvePseudoZOrder(pseudoStyles, pseudoType) {
+    const zIndex = parseFloat(pseudoStyles.zIndex);
+    if (Number.isFinite(zIndex)) {
+      return zIndex < 0 ? 'bottom' : 'top';
+    }
+
+    return pseudoType === 'before' ? 'bottom' : 'top';
+  }
+
+  function hasSupportedPseudoVisual(cs) {
+    return !isTransparentColor(cs.backgroundColor) ||
+      String(cs.backgroundImage || '').includes('linear-gradient') ||
+      cs.borderStyle !== 'none' ||
+      parseFloat(cs.borderTopWidth) > 0 ||
+      parseFloat(cs.borderRightWidth) > 0 ||
+      parseFloat(cs.borderBottomWidth) > 0 ||
+      parseFloat(cs.borderLeftWidth) > 0 ||
+      cs.boxShadow !== 'none';
+  }
+
+  function estimatePseudoTextRect(el, parentStyles, pseudoStyles, pseudoType) {
+    const parentRect = el.getBoundingClientRect();
+    const width = parseCssPx(pseudoStyles.width);
+    const height = parseCssPx(pseudoStyles.height) || parseCssPx(pseudoStyles.lineHeight) || parseCssPx(pseudoStyles.fontSize);
+    const position = pseudoStyles.position;
+
+    if (position === 'absolute' || position === 'fixed') {
+      return estimatePositionedPseudoRect(parentRect, pseudoStyles, width, height);
+    }
+
+    if (parentStyles.display === 'flex' || parentStyles.display === 'inline-flex') {
+      return estimateFlexPseudoRect(parentRect, parentStyles, width, height, pseudoType);
+    }
+
+    return {
+      x: pseudoType === 'before' ? parentRect.x : parentRect.right - width,
+      y: parentRect.y + Math.max((parentRect.height - height) / 2, 0),
+      width,
+      height,
+    };
+  }
+
+  function estimatePositionedPseudoRect(parentRect, pseudoStyles, width, height) {
+    const left = pseudoStyles.left !== 'auto' ? parseCssPx(pseudoStyles.left) : null;
+    const right = pseudoStyles.right !== 'auto' ? parseCssPx(pseudoStyles.right) : null;
+    const top = pseudoStyles.top !== 'auto' ? parseCssPx(pseudoStyles.top) : null;
+    const bottom = pseudoStyles.bottom !== 'auto' ? parseCssPx(pseudoStyles.bottom) : null;
+
+    return {
+      x: parentRect.x + (left !== null ? left : parentRect.width - width - (right || 0)),
+      y: parentRect.y + (top !== null ? top : parentRect.height - height - (bottom || 0)),
+      width,
+      height,
+    };
+  }
+
+  function estimateFlexPseudoRect(parentRect, parentStyles, width, height, pseudoType) {
+    const isRow = parentStyles.flexDirection !== 'column' && parentStyles.flexDirection !== 'column-reverse';
+    const isReverse = parentStyles.flexDirection === 'row-reverse' || parentStyles.flexDirection === 'column-reverse';
+    const isEnd = (pseudoType === 'after') !== isReverse;
+
+    if (isRow) {
+      return {
+        x: isEnd ? parentRect.right - width : parentRect.x,
+        y: alignCrossAxis(parentRect.y, parentRect.height, height, parentStyles.alignItems),
+        width,
+        height,
+      };
+    }
+
+    return {
+      x: alignCrossAxis(parentRect.x, parentRect.width, width, parentStyles.alignItems),
+      y: isEnd ? parentRect.bottom - height : parentRect.y,
+      width,
+      height,
+    };
+  }
+
+  function alignCrossAxis(start, parentSize, childSize, alignItems) {
+    if (alignItems === 'center') {
+      return start + Math.max((parentSize - childSize) / 2, 0);
+    }
+    if (alignItems === 'flex-end') {
+      return start + Math.max(parentSize - childSize, 0);
+    }
+    return start;
+  }
+
+  function parseCssContent(value) {
+    if (!value || value === 'none' || value === 'normal') return '';
+    const trimmed = String(value).trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      return trimmed.slice(1, -1)
+        .replace(/\\"/g, '"')
+        .replace(/\\'/g, "'");
+    }
+    return trimmed;
+  }
+
+  function parseCssPx(value) {
+    if (!value || value === 'auto' || value === 'normal' || value === 'none') return 0;
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function buildPseudoName(el, tag) {
+    const classPart = Array.from(el.classList || []).slice(0, 2).join('.');
+    return classPart ? `${tag}.${classPart}` : tag;
+  }
+
   function canCollapseToTextContainer(el, tag, cs, hasOnlyInlineTextChildren) {
     const hasElementChildren = el.children.length > 0;
     if (!hasElementChildren) {
       return true;
     }
 
-    if (!TEXT_TAGS.has(tag) || !hasOnlyInlineTextChildren) {
+    if (!hasOnlyInlineTextChildren) {
       return false;
     }
 
-    return true;
+    return TEXT_TAGS.has(tag) || tag === 'div';
   }
 
 function normalizeTextContent(value) {

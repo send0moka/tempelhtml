@@ -44,6 +44,13 @@ export async function resolveFonts(domTree) {
       const key = `${runFamily}|${run.computed?.fontWeight ?? '400'}|${run.computed?.fontStyle ?? 'normal'}`;
       needed.add(key);
     }
+
+    for (const pseudo of [node.pseudo?.before, node.pseudo?.after]) {
+      const pseudoFamily = pseudo?.computed?.fontFamily;
+      if (!pseudoFamily) continue;
+      const key = `${pseudoFamily}|${pseudo.computed?.fontWeight ?? '400'}|${pseudo.computed?.fontStyle ?? 'normal'}`;
+      needed.add(key);
+    }
   });
 
   const fontMap = {};

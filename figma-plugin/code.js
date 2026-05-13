@@ -1328,7 +1328,9 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
     frame.strokeWeight = spec.strokeWeight || 1;
     frame.strokeAlign = spec.strokeAlign || 'INSIDE';
   }
-  if (spec.effects && spec.effects.length > 0) frame.effects = spec.effects;
+  if (spec.effects && spec.effects.length > 0) {
+    applyFrameEffects(frame, spec.effects);
+  }
   if (spec.blendMode) {
     try {
       frame.blendMode = spec.blendMode;
@@ -1353,6 +1355,9 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
     }
   }
 
+  if (frame.layoutMode && frame.layoutMode !== 'NONE') {
+    applySmartAutoLayoutSizing(frame, spec, spec._gridStrategy || null);
+  }
   if (spec._hoverSpec) {
     return buildComponentWithVariants(frame, spec._hoverSpec);
   }
@@ -1471,6 +1476,244 @@ function applyGridStrategy(frame, strategy) {
   }
 }
 
+function applyFrameEffects(frame, effects) {
+  try {
+    frame.effects = getSupportedFrameEffects(effects);
+  } catch (err) {
+    frame.effects = getLegacyFrameEffects(effects);
+  }
+}
+
+function getSupportedFrameEffects(effects) {
+  if (!Array.isArray(effects) || effects.length === 0) {
+    return [];
+  }
+
+  return effects;
+}
+
+function getLegacyFrameEffects(effects) {
+  if (!Array.isArray(effects) || effects.length === 0) {
+    return [];
+  }
+
+  const supported = [];
+  for (let index = 0; index < effects.length; index++) {
+    const effect = effects[index];
+    if (!effect || effect.spread === undefined) {
+      supported.push(effect);
+      continue;
+    }
+
+    const copy = Object.assign({}, effect);
+    delete copy.spread;
+    supported.push(copy);
+  }
+  return supported;
+}
+
+function applySmartAutoLayoutSizing(frame, spec, strategy) {
+  if (!frame || !frame.layoutMode || frame.layoutMode === 'NONE') {
+    return;
+  }
+
+  const sourceSpec = spec || {};
+  const sourceStrategy = strategy || {};
+  const layoutMode = frame.layoutMode;
+  const renderedWidth = Number.isFinite(sourceSpec.width) ? sourceSpec.width : frame.width;
+  const renderedHeight = Number.isFinite(sourceSpec.height) ? sourceSpec.height : frame.height;
+  const sizing = determineAutoLayoutSizing({
+    layoutMode,
+    width: renderedWidth,
+    height: renderedHeight,
+    paddingTop: pickNumber(sourceSpec.paddingTop, frame.paddingTop),
+    paddingRight: pickNumber(sourceSpec.paddingRight, frame.paddingRight),
+    paddingBottom: pickNumber(sourceSpec.paddingBottom, frame.paddingBottom),
+    paddingLeft: pickNumber(sourceSpec.paddingLeft, frame.paddingLeft),
+    itemSpacing: pickNumber(sourceSpec.itemSpacing, frame.itemSpacing),
+    primaryAxisAlignItems: frame.primaryAxisAlignItems || sourceSpec.primaryAxisAlignItems,
+    counterAxisAlignItems: frame.counterAxisAlignItems || sourceSpec.counterAxisAlignItems,
+    fills: sourceSpec.fills || [],
+    strokes: sourceSpec.strokes || [],
+    effects: sourceSpec.effects || [],
+    clipsContent: sourceSpec.clipsContent,
+    backgroundPattern: sourceSpec._backgroundPattern || null,
+    children: Array.isArray(sourceSpec.children) ? sourceSpec.children : [],
+  });
+
+  const primaryMode = sourceStrategy.primaryAxisSizingMode || (sizing.primaryFixed ? 'FIXED' : null);
+  const counterMode = sourceStrategy.counterAxisSizingMode || (sizing.counterFixed ? 'FIXED' : null);
+
+  if (primaryMode) {
+    try {
+      frame.primaryAxisSizingMode = primaryMode;
+    } catch (err) {}
+    if (layoutMode === 'HORIZONTAL') {
+      try {
+        frame.layoutSizingHorizontal = primaryMode;
+      } catch (err) {}
+    } else if (layoutMode === 'VERTICAL') {
+      try {
+        frame.layoutSizingVertical = primaryMode;
+      } catch (err) {}
+    }
+  }
+
+  if (counterMode) {
+    try {
+      frame.counterAxisSizingMode = counterMode;
+    } catch (err) {}
+    if (layoutMode === 'HORIZONTAL') {
+      try {
+        frame.layoutSizingVertical = counterMode;
+      } catch (err) {}
+    } else if (layoutMode === 'VERTICAL') {
+      try {
+        frame.layoutSizingHorizontal = counterMode;
+      } catch (err) {}
+    }
+  }
+
+  if (primaryMode || counterMode) {
+    try {
+      frame.resize(
+        Math.max(renderedWidth, 1),
+        Math.max(renderedHeight, 1)
+      );
+    } catch (err) {}
+  }
+}
+
+function determineAutoLayoutSizing(spec) {
+  const children = getFlowChildren(spec.children);
+  if (!children.length) {
+    return {
+      primaryFixed: hasVisibleFrameSurface(spec) && hasMeaningfulFreeSpace(spec, children, 'primary'),
+      counterFixed: false,
+    };
+  }
+
+  return {
+    primaryFixed: shouldFixAxis(spec, children, 'primary'),
+    counterFixed: shouldFixAxis(spec, children, 'counter'),
+  };
+}
+
+function shouldFixAxis(spec, children, axisRole) {
+  const layoutMode = spec.layoutMode;
+  const axis = axisRole === 'primary'
+    ? layoutMode === 'HORIZONTAL' ? 'HORIZONTAL' : 'VERTICAL'
+    : layoutMode === 'HORIZONTAL' ? 'VERTICAL' : 'HORIZONTAL';
+
+  const renderedSize = axis === 'HORIZONTAL' ? pickNumber(spec.width, 0) : pickNumber(spec.height, 0);
+  const contentSize = measureAutoLayoutContentSize(spec, children, axis);
+  const freeSpace = renderedSize - contentSize;
+  const tolerance = 2;
+
+  if (freeSpace <= tolerance) {
+    return false;
+  }
+
+  const align = axisRole === 'primary'
+    ? String(spec.primaryAxisAlignItems || 'MIN')
+    : String(spec.counterAxisAlignItems || 'MIN');
+  const hasSurface = hasVisibleFrameSurface(spec);
+
+  if (axisRole === 'primary') {
+    if (align === 'SPACE_BETWEEN' || align === 'CENTER' || align === 'MAX') {
+      return children.length > 1 || hasSurface;
+    }
+    return hasSurface;
+  }
+
+  if (align === 'CENTER' || align === 'MAX' || align === 'STRETCH') {
+    return hasSurface;
+  }
+
+  return false;
+}
+
+function hasMeaningfulFreeSpace(spec, children, axisRole) {
+  const layoutMode = spec.layoutMode;
+  const axis = axisRole === 'primary'
+    ? layoutMode === 'HORIZONTAL' ? 'HORIZONTAL' : 'VERTICAL'
+    : layoutMode === 'HORIZONTAL' ? 'VERTICAL' : 'HORIZONTAL';
+  const renderedSize = axis === 'HORIZONTAL' ? pickNumber(spec.width, 0) : pickNumber(spec.height, 0);
+  const contentSize = measureAutoLayoutContentSize(spec, children, axis);
+  return renderedSize - contentSize > 2;
+}
+
+function measureAutoLayoutContentSize(spec, children, axis) {
+  const startPadding = axis === 'HORIZONTAL' ? pickNumber(spec.paddingLeft, 0) : pickNumber(spec.paddingTop, 0);
+  const endPadding = axis === 'HORIZONTAL' ? pickNumber(spec.paddingRight, 0) : pickNumber(spec.paddingBottom, 0);
+  const spacing = pickNumber(spec.itemSpacing, 0);
+
+  let total = startPadding + endPadding;
+  let previousCount = 0;
+
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index];
+    if (!child || child.layoutPositioning === 'ABSOLUTE' || child._isPseudo) {
+      continue;
+    }
+
+    const childSize = axis === 'HORIZONTAL'
+      ? pickNumber(child.width, 0)
+      : pickNumber(child.height, 0);
+    total += childSize;
+    previousCount++;
+  }
+
+  if (previousCount > 1) {
+    total += spacing * (previousCount - 1);
+  }
+
+  return total;
+}
+
+function hasVisibleFrameSurface(spec) {
+  const sourceSpec = spec || {};
+  return hasVisiblePaints(sourceSpec.fills)
+    || hasVisiblePaints(sourceSpec.strokes)
+    || (Array.isArray(sourceSpec.effects) && sourceSpec.effects.length > 0)
+    || sourceSpec.clipsContent === true
+    || Boolean(sourceSpec._backgroundPattern || sourceSpec.backgroundPattern);
+}
+
+function hasVisiblePaints(paints) {
+  if (!Array.isArray(paints) || paints.length === 0) {
+    return false;
+  }
+
+  for (let index = 0; index < paints.length; index++) {
+    const paint = paints[index];
+    if (paint && paint.visible !== false && !isFullyTransparentPaint(paint)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getFlowChildren(children) {
+  if (!Array.isArray(children) || children.length === 0) {
+    return [];
+  }
+
+  const flow = [];
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index];
+    if (!child || child.layoutPositioning === 'ABSOLUTE' || child._isPseudo) {
+      continue;
+    }
+    flow.push(child);
+  }
+  return flow;
+}
+
+function pickNumber(primary, fallback) {
+  return Number.isFinite(primary) ? primary : Number.isFinite(fallback) ? fallback : 0;
+}
+
 function buildComponentWithVariants(defaultFrame, hoverSpec) {
   try {
     const component = figma.createComponent();
@@ -1479,7 +1722,7 @@ function buildComponentWithVariants(defaultFrame, hoverSpec) {
     component.x = defaultFrame.x;
     component.y = defaultFrame.y;
 
-    if (defaultFrame.fills) component.fills = defaultFrame.fills;
+    copyFramePresentationProps(defaultFrame, component);
 
     for (const child of Array.from(defaultFrame.children)) {
       component.appendChild(child);
@@ -1490,6 +1733,43 @@ function buildComponentWithVariants(defaultFrame, hoverSpec) {
   } catch (err) {
     return defaultFrame;
   }
+}
+
+function copyFramePresentationProps(source, target) {
+  copyNodeProp(source, target, 'fills');
+  copyNodeProp(source, target, 'strokes');
+  copyNodeProp(source, target, 'strokeWeight');
+  copyNodeProp(source, target, 'strokeAlign');
+  copyNodeProp(source, target, 'effects');
+  copyNodeProp(source, target, 'opacity');
+  copyNodeProp(source, target, 'clipsContent');
+  copyNodeProp(source, target, 'cornerRadius');
+  copyNodeProp(source, target, 'topLeftRadius');
+  copyNodeProp(source, target, 'topRightRadius');
+  copyNodeProp(source, target, 'bottomRightRadius');
+  copyNodeProp(source, target, 'bottomLeftRadius');
+  copyNodeProp(source, target, 'paddingTop');
+  copyNodeProp(source, target, 'paddingRight');
+  copyNodeProp(source, target, 'paddingBottom');
+  copyNodeProp(source, target, 'paddingLeft');
+  copyNodeProp(source, target, 'layoutMode');
+  copyNodeProp(source, target, 'primaryAxisAlignItems');
+  copyNodeProp(source, target, 'counterAxisAlignItems');
+  copyNodeProp(source, target, 'itemSpacing');
+  copyNodeProp(source, target, 'primaryAxisSizingMode');
+  copyNodeProp(source, target, 'counterAxisSizingMode');
+  copyNodeProp(source, target, 'layoutSizingHorizontal');
+  copyNodeProp(source, target, 'layoutSizingVertical');
+}
+
+function copyNodeProp(source, target, prop) {
+  if (source[prop] === undefined) {
+    return;
+  }
+
+  try {
+    target[prop] = source[prop];
+  } catch (err) {}
 }
 
 function applyBackgroundPattern(frame, pattern) {

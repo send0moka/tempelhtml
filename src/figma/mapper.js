@@ -18,8 +18,9 @@ import {
   mapTypography,
   mapTextStroke,
   parseLinearGradient,
+  parseLinearGradientLayers,
 } from './css-to-figma.js';
-import { solidPaint as colorSolidPaint } from '../utils/color.js';
+import { cssColorToFigma, solidPaint as colorSolidPaint } from '../utils/color.js';
 import { parsePx } from '../utils/units.js';
 
 /**
@@ -127,14 +128,25 @@ function buildNode(node, parentRect, ctx, path) {
     childNodes.push(buildEmbeddedTextNode(node, ctx, `${path}.text`));
   }
 
-  const pseudoChildren = node.pseudoChildren || [];
-  const pseudoBefore = pseudoChildren
+  const pseudoChildren = (node.pseudoChildren || []).concat(getNativePseudoChildren(node));
+  const mergeablePseudoBackgrounds = [];
+  const renderablePseudoChildren = [];
+
+  for (const pseudo of pseudoChildren) {
+    if (shouldMergePseudoIntoParent(node, pseudo)) {
+      mergeablePseudoBackgrounds.push(...buildMergedPseudoBackgrounds(pseudo));
+      continue;
+    }
+    renderablePseudoChildren.push(pseudo);
+  }
+
+  const pseudoBefore = renderablePseudoChildren
     .filter((pseudo) => pseudo.zOrder !== 'top')
-    .map((pseudo, index) => buildPseudoNode(pseudo, `${path}.pseudo.${index}`))
+    .map((pseudo, index) => buildPseudoNode(pseudo, `${path}.pseudo.${index}`, ctx))
     .filter(Boolean);
-  const pseudoTop = pseudoChildren
+  const pseudoTop = renderablePseudoChildren
     .filter((pseudo) => pseudo.zOrder === 'top')
-    .map((pseudo, index) => buildPseudoNode(pseudo, `${path}.pseudoTop.${index}`))
+    .map((pseudo, index) => buildPseudoNode(pseudo, `${path}.pseudoTop.${index}`, ctx))
     .filter(Boolean);
 
   frameNode.children = pseudoBefore
@@ -146,11 +158,57 @@ function buildNode(node, parentRect, ctx, path) {
     )
     .concat(pseudoTop);
 
+  if (mergeablePseudoBackgrounds.length > 0) {
+    frameNode.fills = frameNode.fills.concat(mergeablePseudoBackgrounds);
+  }
+
   return frameNode;
 }
 
-function buildPseudoNode(pseudo, path) {
+function getNativePseudoChildren(node) {
+  const result = [];
+  const pseudo = node?.pseudo || {};
+  const rect = node?.rect || { x: 0, y: 0 };
+
+  for (const type of ['before', 'after']) {
+    const entry = pseudo[type];
+    if (!entry?.rect) continue;
+
+    result.push({
+      ...entry,
+      x: entry.rect.x - rect.x,
+      y: entry.rect.y - rect.y,
+      width: entry.rect.width,
+      height: entry.rect.height,
+      zOrder: entry.zOrder || (type === 'before' ? 'bottom' : 'top'),
+    });
+  }
+
+  return result;
+}
+
+function buildPseudoNode(pseudo, path, ctx = {}) {
   const pseudoId = `pseudo-${path}-${pseudo.name.replace(/\s+/g, '-').toLowerCase()}`;
+  const isTextPseudo = pseudo.type === 'text' && Boolean(pseudo.content);
+  const pseudoBackgrounds = isTextPseudo ? [] : buildPseudoBackgrounds(pseudo.computed, pseudo.fillColor);
+  const pseudoEffects = pseudo.computed ? mapBoxShadow(pseudo.computed) : [];
+  const pseudoStrokes = pseudo.computed ? mapBorder(pseudo.computed) : {};
+  const textTypography = pseudo.computed
+    ? {
+        ...mapTypography(pseudo.computed, ctx.fontMap),
+        ...mapTextStroke(pseudo.computed),
+      }
+    : {
+        fontName: {
+          family: 'Inter',
+          style: 'Regular',
+        },
+        fontSize: Math.max(Math.min(Math.round(pseudo.height || 16), 48), 12),
+        fills: pseudo.fillColor && pseudo.fillColor !== 'noise-texture'
+          ? [colorSolidPaint(pseudo.fillColor)]
+          : [colorSolidPaint('#ffffff')],
+      };
+
   return {
     id: pseudoId,
     name: `[pseudo] ${pseudo.name}`,
@@ -160,9 +218,9 @@ function buildPseudoNode(pseudo, path) {
     width: Math.round(pseudo.width),
     height: Math.round(pseudo.height),
     opacity: roundFloat(pseudo.opacity ?? 1),
-    fills: pseudo.fillColor && pseudo.fillColor !== 'noise-texture'
-      ? [colorSolidPaint(pseudo.fillColor)]
-      : [],
+    fills: pseudoBackgrounds,
+    ...pseudoStrokes,
+    effects: pseudoEffects,
     _isPseudo: true,
     _pseudoType: pseudo.type,
     _pseudoPosition: pseudo.position,
@@ -174,16 +232,88 @@ function buildPseudoNode(pseudo, path) {
       x: 0, y: 0,
       width: pseudo.width,
       height: pseudo.height,
-      fontName: {
-        family: 'Inter',
-        style: 'Regular',
-      },
-      fontSize: Math.max(Math.min(Math.round(pseudo.height || 16), 48), 12),
-      fills: pseudo.fillColor && pseudo.fillColor !== 'noise-texture'
-        ? [colorSolidPaint(pseudo.fillColor)]
-        : [colorSolidPaint('#ffffff')],
+      ...textTypography,
     }] : [],
   };
+}
+
+function buildPseudoBackgrounds(computed, fallbackFillColor) {
+  if (!computed) {
+    return fallbackFillColor && fallbackFillColor !== 'noise-texture'
+      ? [colorSolidPaint(fallbackFillColor)]
+      : [];
+  }
+
+  const fills = mapBackgroundColor(computed);
+  if (computed.backgroundImage && computed.backgroundImage.includes('linear-gradient')) {
+    fills.push(...parseLinearGradientLayers(computed.backgroundImage));
+  }
+
+  if (fills.length === 0 && fallbackFillColor && fallbackFillColor !== 'noise-texture') {
+    fills.push(colorSolidPaint(fallbackFillColor));
+  }
+
+  return fills;
+}
+
+function buildMergedPseudoBackgrounds(pseudo) {
+  const paints = buildPseudoBackgrounds(pseudo.computed, pseudo.fillColor);
+  const opacity = Number.isFinite(pseudo.opacity) ? pseudo.opacity : 1;
+  return paints.map((paint) => applyPaintOpacity(paint, opacity));
+}
+
+function shouldMergePseudoIntoParent(node, pseudo) {
+  if (!node?.computed || !pseudo || pseudo.type === 'text' || pseudo.zOrder !== 'bottom') {
+    return false;
+  }
+
+  const position = pseudo.position;
+  if (position !== 'absolute' && position !== 'fixed') {
+    return false;
+  }
+
+  if (!isTransparentCssBackground(node.computed) || !pseudo.rect || !node.rect) {
+    return false;
+  }
+
+  const parent = node.rect;
+  const child = pseudo.rect;
+  const tolerance = 1.5;
+  const coversParent =
+    Math.abs((child.x ?? 0) - (parent.x ?? 0)) <= tolerance &&
+    Math.abs((child.y ?? 0) - (parent.y ?? 0)) <= tolerance &&
+    Math.abs((child.width ?? 0) - (parent.width ?? 0)) <= tolerance &&
+    Math.abs((child.height ?? 0) - (parent.height ?? 0)) <= tolerance;
+
+  if (!coversParent) {
+    return false;
+  }
+
+  return buildPseudoBackgrounds(pseudo.computed, pseudo.fillColor).length > 0;
+}
+
+function isTransparentCssBackground(computed) {
+  const backgroundColor = computed?.backgroundColor || '';
+  const backgroundImage = computed?.backgroundImage || '';
+  return isTransparentCssColor(backgroundColor) && backgroundImage === 'none';
+}
+
+function isTransparentCssColor(value) {
+  if (!value || value === 'transparent' || value === 'none') {
+    return true;
+  }
+  return cssColorToFigma(value).a === 0;
+}
+
+function applyPaintOpacity(paint, opacity) {
+  if (!paint || opacity === 1 || !Number.isFinite(opacity)) {
+    return paint;
+  }
+
+  const copy = JSON.parse(JSON.stringify(paint));
+  const existing = Number.isFinite(copy.opacity) ? copy.opacity : 1;
+  copy.opacity = existing * opacity;
+  return copy;
 }
 
 function buildName(tag, classList) {

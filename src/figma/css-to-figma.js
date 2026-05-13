@@ -109,19 +109,7 @@ export function mapBackgroundColor(computed) {
  * Handles: linear-gradient(to bottom, ...) and linear-gradient(180deg, ...)
  */
 export function parseLinearGradient(cssGradient) {
-  // Simplified parser for common cases
-  const toBottomMatch = cssGradient.match(/linear-gradient\(to bottom/i);
-  const degMatch = cssGradient.match(/linear-gradient\(([\d.]+)deg/);
-
-  let angle = 180; // default: to bottom
-  if (degMatch) angle = parseFloat(degMatch[1]);
-  else if (toBottomMatch) angle = 180;
-
-  const rad = (angle * Math.PI) / 180;
-  const gradientTransform = [
-    [Math.cos(rad), Math.sin(rad), 0],
-    [-Math.sin(rad), Math.cos(rad), 0.5],
-  ];
+  const gradientTransform = linearGradientTransform(cssGradient);
 
   // Extract color stops (simplified — handles rgba and hex)
   const stops = extractGradientStops(cssGradient);
@@ -133,8 +121,56 @@ export function parseLinearGradient(cssGradient) {
   };
 }
 
+export function parseLinearGradientLayers(cssBackgroundImage) {
+  return splitCssLayers(cssBackgroundImage)
+    .filter((layer) => /^linear-gradient\(/i.test(layer.trim()))
+    .map((layer) => parseLinearGradient(layer));
+}
+
+function linearGradientTransform(cssGradient) {
+  const angle = parseLinearGradientAngle(cssGradient);
+  const rad = ((angle - 90) * Math.PI) / 180;
+  const dx = normalizeZero(Math.cos(rad));
+  const dy = normalizeZero(Math.sin(rad));
+
+  return [
+    [dx, dy, normalizeZero(0.5 - dx / 2 - dy / 2)],
+    [normalizeZero(-dy), dx, normalizeZero(0.5 + dy / 2 - dx / 2)],
+  ];
+}
+
+function normalizeZero(value) {
+  if (Math.abs(value) < 1e-12) return 0;
+  if (Math.abs(value - 1) < 1e-12) return 1;
+  if (Math.abs(value + 1) < 1e-12) return -1;
+  return value;
+}
+
+function parseLinearGradientAngle(cssGradient) {
+  const directionMatch = cssGradient.match(/linear-gradient\(\s*to\s+([a-z\s]+?)(?:,|\))/i);
+  if (directionMatch) {
+    const direction = directionMatch[1].trim().toLowerCase();
+    if (direction === 'right') return 90;
+    if (direction === 'left') return 270;
+    if (direction === 'bottom') return 180;
+    if (direction === 'top') return 0;
+    if (direction === 'bottom right' || direction === 'right bottom') return 135;
+    if (direction === 'bottom left' || direction === 'left bottom') return 225;
+    if (direction === 'top right' || direction === 'right top') return 45;
+    if (direction === 'top left' || direction === 'left top') return 315;
+  }
+
+  const degMatch = cssGradient.match(/linear-gradient\(\s*(-?[\d.]+)deg/i);
+  if (degMatch) {
+    const angle = parseFloat(degMatch[1]);
+    if (Number.isFinite(angle)) return angle;
+  }
+
+  return 180;
+}
+
 function extractGradientStops(css) {
-  const stopRegex = /(rgba?\([^)]+\)|#[0-9a-f]{3,8})\s*([\d.]+%)?/gi;
+  const stopRegex = /(rgba?\([^)]+\)|#[0-9a-f]{3,8}|transparent)\s*([\d.]+%)?/gi;
   const stops = [];
   let match;
   let index = 0;
@@ -150,6 +186,60 @@ function extractGradientStops(css) {
     { color: { r: 0, g: 0, b: 0, a: 0 }, position: 0 },
     { color: { r: 0, g: 0, b: 0, a: 0 }, position: 1 },
   ];
+}
+
+function splitCssLayers(css) {
+  const source = String(css || '');
+  const layers = [];
+  let current = '';
+  let depth = 0;
+  let quote = null;
+
+  for (let index = 0; index < source.length; index++) {
+    const char = source[index];
+
+    if (quote) {
+      current += char;
+      if (char === quote && source[index - 1] !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+
+    if (char === '(') {
+      depth++;
+      current += char;
+      continue;
+    }
+
+    if (char === ')') {
+      depth = Math.max(depth - 1, 0);
+      current += char;
+      continue;
+    }
+
+    if (char === ',' && depth === 0) {
+      if (current.trim()) {
+        layers.push(current.trim());
+      }
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    layers.push(current.trim());
+  }
+
+  return layers;
 }
 
 // ─── BORDERS / STROKES ────────────────────────────────────────────────────────

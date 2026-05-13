@@ -72,7 +72,7 @@ function baseComputed(overrides = {}) {
   };
 }
 
-function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], effectiveZ = 0 }) {
+function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0 }) {
   return {
     tag,
     id: null,
@@ -82,7 +82,7 @@ function frameNode({ tag = 'div', classList = [], rect, computed = {}, children 
     isTextContainer: false,
     rect,
     computed: baseComputed(computed),
-    pseudo: { before: null, after: null },
+    pseudo,
     children,
     effectiveZ,
   };
@@ -246,4 +246,42 @@ test('assigns a fallback font to pseudo text content', () => {
     family: 'Inter',
     style: 'Regular',
   });
+});
+
+test('merges full-cover negative z pseudo backgrounds into the parent fill', () => {
+  const nav = frameNode({
+    tag: 'nav',
+    rect: { x: 0, y: 0, width: 300, height: 60 },
+    pseudo: {
+      before: null,
+      after: {
+        name: 'nav::after',
+        type: 'box',
+        content: null,
+        rect: { x: 0, y: 0, width: 300, height: 60 },
+        fillColor: 'rgb(13, 12, 10)',
+        opacity: 1,
+        position: 'absolute',
+        zOrder: 'bottom',
+        computed: baseComputed({
+          position: 'absolute',
+          zIndex: '-1',
+          width: '300px',
+          height: '60px',
+          backgroundImage: 'linear-gradient(to bottom, rgb(13, 12, 10) 0%, rgba(0, 0, 0, 0) 100%)',
+        }),
+      },
+    },
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 300, height: 60 },
+    children: [nav],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtNav = tree.children[0];
+
+  expect(builtNav.children.some((child) => child.name.includes('[pseudo]'))).toBe(false);
+  expect(builtNav.fills[0].type).toBe('GRADIENT_LINEAR');
 });

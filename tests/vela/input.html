@@ -17,6 +17,7 @@
       --muted: #5a5648;
       --text: #d6cfc0;
       --white: #faf8f3;
+      --line: #201e19;
     }
 
     html { scroll-behavior: smooth; }
@@ -274,8 +275,8 @@
     /* MARQUEE */
     .marquee-wrap {
       overflow: hidden;
-      border-top: 1px solid #1e1c17;
-      border-bottom: 1px solid #1e1c17;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       padding: 18px 0;
       background: var(--surface);
     }
@@ -312,12 +313,12 @@
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      border-bottom: 1px solid #1e1c17;
+      border-bottom: 1px solid var(--line);
     }
 
     .stat {
       padding: 60px 50px;
-      border-right: 1px solid #1e1c17;
+      border-right: 1px solid var(--line);
       position: relative;
       overflow: hidden;
       transition: background 0.4s;
@@ -331,6 +332,7 @@
       font-weight: 900;
       color: var(--white);
       line-height: 1;
+      white-space: nowrap;
       margin-bottom: 8px;
     }
     .stat-number em { color: var(--gold); font-style: normal; }
@@ -532,8 +534,8 @@
     .testimonial-section {
       padding: 100px 60px;
       background: var(--surface);
-      border-top: 1px solid #1e1c17;
-      border-bottom: 1px solid #1e1c17;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       position: relative;
       overflow: hidden;
     }
@@ -651,7 +653,7 @@
 
     /* FOOTER */
     footer {
-      border-top: 1px solid #1e1c17;
+      border-top: 1px solid var(--line);
       padding: 60px;
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr;
@@ -679,7 +681,7 @@
     .footer-col ul a:hover { color: var(--cream); }
 
     .footer-bottom {
-      border-top: 1px solid #1e1c17;
+      border-top: 1px solid var(--line);
       padding: 24px 60px;
       display: flex;
       justify-content: space-between;
@@ -728,7 +730,7 @@
       .hero-left { padding: 120px 28px 60px; }
       .hero-right { display: none; }
       .stats { grid-template-columns: 1fr 1fr; }
-      .stat { border-right: none; border-bottom: 1px solid #1e1c17; }
+      .stat { border-right: none; border-bottom: 1px solid var(--line); }
       .section, .work-section { padding: 80px 28px; }
       .services-grid { grid-template-columns: 1fr; gap: 2px; }
       .work-grid { grid-template-columns: 1fr; }
