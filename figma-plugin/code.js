@@ -4,13 +4,19 @@
  */
 
 const DEFAULT_CONVERTER_URL = 'http://localhost:3210';
+const BENCHMARK_URL = 'https://figmaeval.vercel.app';
 
-figma.showUI(__html__, { width: 520, height: 680 });
+figma.showUI(__html__, { width: 420, height: 450 });
 
 figma.ui.onmessage = async (msg) => {
   try {
     if (msg.type === 'BUILD') {
       await buildFromSnapshot(msg.data);
+      return;
+    }
+
+    if (msg.type === 'OPEN_BENCHMARK') {
+      openBenchmark();
       return;
     }
 
@@ -24,9 +30,14 @@ figma.ui.onmessage = async (msg) => {
 };
 
 async function convertAndBuild(payload) {
-  progress('Uploading HTML to local server...', 1);
+  const serverUrl = payload.serverUrl || DEFAULT_CONVERTER_URL;
 
-  const response = await fetch(getJobStartUrl(payload.serverUrl || DEFAULT_CONVERTER_URL), {
+  progress('Checking converter...', 1);
+  await ensureConverterReady(serverUrl);
+
+  progress('Uploading HTML to local converter...', 2);
+
+  const response = await fetch(getJobStartUrl(serverUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -52,8 +63,32 @@ async function convertAndBuild(payload) {
   }
 
   progress('Job queued. Rendering page...', 3);
-  const result = await waitForJob(payload.serverUrl || DEFAULT_CONVERTER_URL, started.jobId);
+  const result = await waitForJob(serverUrl, started.jobId);
   await buildFromSnapshot(result);
+}
+
+function openBenchmark() {
+  if (typeof figma.openExternal === 'function') {
+    figma.openExternal(BENCHMARK_URL);
+    return;
+  }
+
+  figma.ui.postMessage({
+    type: 'ERROR',
+    message: `Open ${BENCHMARK_URL} in your browser.`,
+  });
+}
+
+async function ensureConverterReady(serverUrl) {
+  const normalized = normalizeServerUrl(serverUrl);
+  try {
+    const response = await fetch(`${normalized}/health`);
+    if (!response.ok) {
+      throw new Error(`Health check failed (${response.status})`);
+    }
+  } catch (err) {
+    throw new Error(`Local converter is not running at ${normalized}. Start it with npm run server, then try again.`);
+  }
 }
 
 async function buildFromSnapshot(data) {

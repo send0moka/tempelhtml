@@ -7,9 +7,12 @@
   "editorType": ["figma"],
   "permissions": ["currentuser"],
   "networkAccess": {
-    "allowedDomains": ["none"],
+    "allowedDomains": [
+      "https://figmaeval.vercel.app"
+    ],
     "devAllowedDomains": [
-      "http://localhost:3210"
+      "http://localhost:3210",
+      "https://figmaeval.vercel.app"
     ]
   }
 }
