@@ -25,6 +25,9 @@ npm test
 npm run snapshot:update
 ```
 
+## Public Use
+To let other people use the plugin without running the local server, deploy the converter as a public HTTPS Node/Playwright service and update the plugin's converter URL. See [docs/deployment.md](docs/deployment.md).
+
 ## Snapshot Test
 `tests/vela/expected-snapshot.json` is the deterministic baseline for `tests/vela/input.html`.
 

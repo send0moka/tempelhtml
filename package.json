@@ -6,6 +6,7 @@
   "main": "scripts/convert.js",
   "scripts": {
     "convert": "node scripts/convert.js",
+    "start": "node scripts/server.js",
     "server": "node scripts/server.js",
     "snapshot:update": "node scripts/update-snapshot.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
