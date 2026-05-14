@@ -99,6 +99,8 @@ async function buildFromSnapshot(data) {
     progress(`Warning: ${warning}`);
   }
 
+  await ensureCurrentPageLoaded();
+
   progress('Pre-loading fonts...', 91);
   await preloadFonts(figmaTree);
 
@@ -122,6 +124,16 @@ async function buildFromSnapshot(data) {
   progress('Done.', 100);
   figma.ui.postMessage({ type: 'DONE', nodeCount: nodeCount, styles: styleRegistry.counts });
   figma.notify(`tempelhtml: ${nodeCount} nodes, ${styleRegistry.counts.paint + styleRegistry.counts.text} styles synced`);
+}
+
+async function ensureCurrentPageLoaded() {
+  if (!figma.currentPage || typeof figma.currentPage.loadAsync !== 'function') {
+    return;
+  }
+
+  try {
+    await figma.currentPage.loadAsync();
+  } catch (err) {}
 }
 
 function progress(text, percent) {
