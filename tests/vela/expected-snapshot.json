@@ -8291,7 +8291,74 @@
                       "cornerRadius": 0,
                       "effects": [],
                       "opacity": 1,
-                      "children": []
+                      "children": [
+                        {
+                          "id": "input-cta-input-0-7-1-1-0-control-inner",
+                          "name": "input.cta-input / placeholder",
+                          "type": "TEXT",
+                          "x": 20,
+                          "y": 16,
+                          "width": 437,
+                          "height": 18,
+                          "characters": "email@perusahaan.com",
+                          "fontName": {
+                            "family": "DM Sans",
+                            "style": "Regular"
+                          },
+                          "fontSize": 14,
+                          "lineHeight": {
+                            "unit": "AUTO"
+                          },
+                          "letterSpacing": {
+                            "value": 0,
+                            "unit": "PIXELS"
+                          },
+                          "textAlignHorizontal": "LEFT",
+                          "textCase": "ORIGINAL",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.35294117647058826,
+                                "g": 0.33725490196078434,
+                                "b": 0.2823529411764706
+                              },
+                              "opacity": 1
+                            }
+                          ],
+                          "textRuns": [
+                            {
+                              "text": "email@perusahaan.com",
+                              "lineIndex": 0,
+                              "fontName": {
+                                "family": "DM Sans",
+                                "style": "Regular"
+                              },
+                              "fontSize": 14,
+                              "lineHeight": {
+                                "unit": "AUTO"
+                              },
+                              "letterSpacing": {
+                                "value": 0,
+                                "unit": "PIXELS"
+                              },
+                              "textAlignHorizontal": "LEFT",
+                              "textCase": "ORIGINAL",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.35294117647058826,
+                                    "g": 0.33725490196078434,
+                                    "b": 0.2823529411764706
+                                  },
+                                  "opacity": 1
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
                       "id": "button-cta-btn-0-7-1-1-1",

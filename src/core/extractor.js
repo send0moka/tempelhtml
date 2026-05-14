@@ -124,6 +124,21 @@ function walkDOMInBrowser() {
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'HEAD', 'NOSCRIPT']);
   const TEXT_TAGS = new Set(['p', 'span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
   const INLINE_TAGS = new Set(['span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'mark', 'sup', 'sub', 'u', 's', 'code', 'br', 'wbr']);
+  const TEXT_INPUT_TYPES = new Set([
+    '',
+    'date',
+    'datetime-local',
+    'email',
+    'month',
+    'number',
+    'password',
+    'search',
+    'tel',
+    'text',
+    'time',
+    'url',
+    'week',
+  ]);
 
   function getNode(el, depth = 0) {
     if (SKIP_TAGS.has(el.tagName)) return null;
@@ -162,6 +177,7 @@ function walkDOMInBrowser() {
     const textData = rawText ? extractTextData(el) : null;
     const beforeData = extractPseudoElementData(el, tag, cs, csBefore, 'before');
     const afterData = extractPseudoElementData(el, tag, cs, csAfter, 'after');
+    const formControl = extractFormControlData(el, tag, cs);
     const svgMarkup = isSvg ? serializeSvgElement(el, rect) : null;
 
     const children = isSvg || isTextContainer
@@ -179,6 +195,7 @@ function walkDOMInBrowser() {
       isTextContainer,
       rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       computed: extractRelevantStyles(cs),
+      ...(formControl ? { formControl } : {}),
       ...(svgMarkup ? { svgMarkup } : {}),
       pseudo: {
         before: beforeData,
@@ -186,6 +203,51 @@ function walkDOMInBrowser() {
       },
       children,
     };
+  }
+
+  function extractFormControlData(el, tag, computedStyles) {
+    if (tag !== 'input' && tag !== 'textarea') {
+      return null;
+    }
+
+    const type = tag === 'input'
+      ? String(el.getAttribute('type') || 'text').trim().toLowerCase()
+      : 'textarea';
+
+    if (tag === 'input' && !TEXT_INPUT_TYPES.has(type)) {
+      return null;
+    }
+
+    const placeholder = normalizeFormControlText(el.getAttribute('placeholder') || '', tag === 'textarea');
+    const value = type === 'password'
+      ? ''
+      : normalizeFormControlText(el.value || '', tag === 'textarea');
+
+    if (!placeholder && !value) {
+      return null;
+    }
+
+    const placeholderComputed = placeholder
+      ? extractPlaceholderStyles(el, computedStyles)
+      : null;
+
+    return {
+      type,
+      value,
+      placeholder,
+      ...(placeholderComputed ? { placeholderComputed } : {}),
+    };
+  }
+
+  function extractPlaceholderStyles(el, fallbackStyles) {
+    try {
+      const placeholderStyles = window.getComputedStyle(el, '::placeholder');
+      if (placeholderStyles) {
+        return extractRelevantStyles(placeholderStyles);
+      }
+    } catch (err) {}
+
+    return extractRelevantStyles(fallbackStyles);
   }
 
   function extractRelevantStyles(cs) {
@@ -933,6 +995,14 @@ function normalizeTextContent(value) {
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]{2,}/g, ' ')
     .trim();
+}
+
+function normalizeFormControlText(value, preserveLineBreaks = false) {
+  const text = String(value || '').replace(/\r/g, '');
+  if (preserveLineBreaks) {
+    return text.trim();
+  }
+  return normalizeTextContent(text);
 }
 
 function isTransparentColor(value) {

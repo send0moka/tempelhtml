@@ -29,6 +29,38 @@ test('preserves structured interactive children instead of collapsing them into 
   expect(btnGhost.computed.display).toBe('flex');
 }, 30000);
 
+test('captures form control placeholders and placeholder styles', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      .newsletter-input {
+        color: rgb(20, 18, 16);
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        padding: 12px 20px;
+      }
+
+      .newsletter-input::placeholder {
+        color: rgba(20, 18, 16, 0.42);
+      }
+    </style>
+    <input class="newsletter-input" type="email" placeholder="email@perusahaan.com" />
+  `, {
+    width: 360,
+    height: 120,
+  });
+
+  const input = find(domTree, (node) => node.classList?.includes('newsletter-input'));
+
+  expect(input).toBeTruthy();
+  expect(input.formControl).toEqual(expect.objectContaining({
+    type: 'email',
+    value: '',
+    placeholder: 'email@perusahaan.com',
+  }));
+  expect(input.formControl.placeholderComputed.color).toBe('rgba(20, 18, 16, 0.42)');
+  expect(input.formControl.placeholderComputed.fontSize).toBe('16px');
+}, 30000);
+
 test('skips pseudo-elements collapsed in the default state', async () => {
   const { domTree } = await extractFromHtml(`
     <style>

@@ -84,7 +84,7 @@ function baseComputed(overrides = {}) {
   };
 }
 
-function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0, svgMarkup = null }) {
+function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0, svgMarkup = null, formControl = null }) {
   return {
     tag,
     id: null,
@@ -94,6 +94,7 @@ function frameNode({ tag = 'div', classList = [], rect, computed = {}, children 
     isTextContainer: false,
     rect,
     computed: baseComputed(computed),
+    ...(formControl ? { formControl } : {}),
     ...(svgMarkup ? { svgMarkup } : {}),
     pseudo,
     children,
@@ -425,6 +426,54 @@ test('maps inline-block text wrappers to horizontal auto layout', () => {
   expect(builtLink.strokeBottomWeight).toBe(1);
   expect(builtLink.children).toHaveLength(1);
   expect(builtLink.children[0].type).toBe('TEXT');
+});
+
+test('maps form control placeholders into text nodes from extracted metadata', () => {
+  const input = frameNode({
+    tag: 'input',
+    classList: ['cta-input'],
+    rect: { x: 0, y: 0, width: 336, height: 49 },
+    computed: {
+      display: 'block',
+      paddingTop: '16px',
+      paddingRight: '20px',
+      paddingBottom: '16px',
+      paddingLeft: '20px',
+      fontFamily: 'DM Sans',
+      fontSize: '16px',
+      fontWeight: '400',
+      color: 'rgb(43, 34, 32)',
+    },
+    formControl: {
+      type: 'email',
+      value: '',
+      placeholder: 'email@perusahaan.com',
+      placeholderComputed: baseComputed({
+        fontFamily: 'DM Sans',
+        fontSize: '16px',
+        fontWeight: '400',
+        color: 'rgba(43, 34, 32, 0.42)',
+      }),
+    },
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 360, height: 120 },
+    children: [input],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtInput = tree.children[0];
+  const placeholder = builtInput.children[0];
+
+  expect(builtInput.name).toBe('input.cta-input');
+  expect(builtInput.children).toHaveLength(1);
+  expect(placeholder.type).toBe('TEXT');
+  expect(placeholder.name).toBe('input.cta-input / placeholder');
+  expect(placeholder.characters).toBe('email@perusahaan.com');
+  expect(placeholder.x).toBe(20);
+  expect(placeholder.y).toBe(16);
+  expect(placeholder.fills[0].opacity).toBeCloseTo(0.42, 2);
 });
 
 test('maps centered flex text containers to centered Figma text alignment', () => {

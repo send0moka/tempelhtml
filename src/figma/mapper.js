@@ -150,6 +150,11 @@ function buildNode(node, parentContext, ctx, path) {
     childNodes.push(buildEmbeddedTextNode(node, ctx, `${path}.text`, resolvedRect));
   }
 
+  const controlTextNode = buildFormControlTextNode(node, ctx, `${path}.control`, resolvedRect);
+  if (controlTextNode) {
+    childNodes.push(controlTextNode);
+  }
+
   const pseudoChildren = (node.pseudoChildren || []).concat(getNativePseudoChildren(node));
   const mergeablePseudoBackgrounds = [];
   const renderablePseudoChildren = [];
@@ -370,6 +375,87 @@ function buildPseudoNode(pseudo, path, ctx = {}) {
   };
 }
 
+function buildFormControlTextNode(node, ctx, path, resolvedRect = null) {
+  const rendered = resolveFormControlText(node.formControl);
+  if (!rendered) {
+    return null;
+  }
+
+  const computed = rendered.kind === 'placeholder'
+    ? mergeFormControlTextStyles(node.computed, node.formControl?.placeholderComputed)
+    : node.computed;
+
+  return buildEmbeddedTextNode(
+    {
+      ...node,
+      text: rendered.text,
+      textRuns: [{
+        text: rendered.text,
+        lineIndex: 0,
+        computed,
+      }],
+      computed,
+    },
+    ctx,
+    path,
+    resolvedRect,
+    rendered.kind
+  );
+}
+
+function resolveFormControlText(formControl) {
+  if (!formControl) {
+    return null;
+  }
+
+  const value = normalizeControlText(formControl.value);
+  if (value) {
+    return { kind: 'value', text: value };
+  }
+
+  const placeholder = normalizeControlText(formControl.placeholder);
+  if (placeholder) {
+    return { kind: 'placeholder', text: placeholder };
+  }
+
+  return null;
+}
+
+function normalizeControlText(value) {
+  return String(value || '').replace(/\r/g, '').trim();
+}
+
+function mergeFormControlTextStyles(baseComputed, overrideComputed) {
+  if (!overrideComputed) {
+    return baseComputed;
+  }
+
+  const merged = { ...baseComputed };
+  const textKeys = [
+    'fontFamily',
+    'fontSize',
+    'fontWeight',
+    'fontStyle',
+    'lineHeight',
+    'letterSpacing',
+    'textAlign',
+    'textTransform',
+    'color',
+    'opacity',
+    'textDecoration',
+    'webkitTextStrokeWidth',
+    'webkitTextStrokeColor',
+  ];
+
+  for (const key of textKeys) {
+    if (overrideComputed[key] !== undefined && overrideComputed[key] !== null && overrideComputed[key] !== '') {
+      merged[key] = overrideComputed[key];
+    }
+  }
+
+  return merged;
+}
+
 function buildPseudoBackgrounds(computed, fallbackFillColor) {
   if (!computed) {
     return fallbackFillColor && fallbackFillColor !== 'noise-texture'
@@ -469,7 +555,7 @@ function roundFloat(value, precision = 4) {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-function buildEmbeddedTextNode(node, ctx, path, resolvedRect = null) {
+function buildEmbeddedTextNode(node, ctx, path, resolvedRect = null, nameSuffix = 'text') {
   const { computed, rect, tag, text, textRuns = [], classList } = node;
   const insetX = parsePx(computed.paddingLeft);
   const insetY = parsePx(computed.paddingTop);
@@ -479,7 +565,7 @@ function buildEmbeddedTextNode(node, ctx, path, resolvedRect = null) {
 
   return {
     id: buildStableId(tag, classList, `${path}-inner`),
-    name: `${buildName(tag, classList)} / text`,
+    name: `${buildName(tag, classList)} / ${nameSuffix}`,
     type: 'TEXT',
     x: Math.round(insetX),
     y: Math.round(insetY),
