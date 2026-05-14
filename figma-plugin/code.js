@@ -3,7 +3,7 @@
  * Figma Plugin main thread - receives HTML or JSON and creates Figma nodes.
  */
 
-const DEFAULT_CONVERTER_URL = 'http://localhost:3210';
+const DEFAULT_CONVERTER_URL = 'https://jehian-tempelhtml.hf.space';
 const BENCHMARK_URL = 'https://figmaeval.vercel.app';
 
 figma.showUI(__html__, { width: 420, height: 450 });
@@ -35,7 +35,7 @@ async function convertAndBuild(payload) {
   progress('Checking converter...', 1);
   await ensureConverterReady(serverUrl);
 
-  progress('Uploading HTML to local converter...', 2);
+  progress('Uploading HTML to converter...', 2);
 
   const response = await fetch(getJobStartUrl(serverUrl), {
     method: 'POST',
@@ -87,7 +87,7 @@ async function ensureConverterReady(serverUrl) {
       throw new Error(`Health check failed (${response.status})`);
     }
   } catch (err) {
-    throw new Error(`Local converter is not running at ${normalized}. Start it with npm run server, then try again.`);
+    throw new Error(`Converter is not reachable at ${normalized}. If this is the public service, wait for it to wake up and try again.`);
   }
 }
 

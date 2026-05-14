@@ -288,7 +288,7 @@
     <div class="top-bar">
       <div class="brand">
         <h2>tempelhtml</h2>
-        <p>Paste HTML, build locally.</p>
+        <p>Paste HTML, build in Figma.</p>
       </div>
       <div class="actions">
         <button id="benchmarkBtn" class="icon-btn" type="button" title="Open benchmark">
@@ -502,7 +502,7 @@
 
       buildBtn.disabled = true;
       progressFill.style.width = '0%';
-      setStatus('Sending HTML to the local converter...');
+      setStatus('Sending HTML to the converter...');
 
       parent.postMessage({
         pluginMessage: {
