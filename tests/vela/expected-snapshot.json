@@ -1759,6 +1759,10 @@
           ],
           "strokeWeight": 1,
           "strokeAlign": "INSIDE",
+          "strokeTopWeight": 1,
+          "strokeRightWeight": 0,
+          "strokeBottomWeight": 1,
+          "strokeLeftWeight": 0,
           "effects": [],
           "opacity": 1,
           "children": [
@@ -3805,6 +3809,23 @@
           "paddingLeft": 0,
           "clipsContent": false,
           "cornerRadius": 0,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.12549019607843137,
+                "g": 0.11764705882352941,
+                "b": 0.09803921568627451
+              },
+              "opacity": 1
+            }
+          ],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE",
+          "strokeTopWeight": 0,
+          "strokeRightWeight": 0,
+          "strokeBottomWeight": 1,
+          "strokeLeftWeight": 0,
           "effects": [],
           "opacity": 1,
           "children": [
@@ -3823,6 +3844,23 @@
               "paddingLeft": 50,
               "clipsContent": true,
               "cornerRadius": 0,
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.12549019607843137,
+                    "g": 0.11764705882352941,
+                    "b": 0.09803921568627451
+                  },
+                  "opacity": 1
+                }
+              ],
+              "strokeWeight": 1,
+              "strokeAlign": "INSIDE",
+              "strokeTopWeight": 0,
+              "strokeRightWeight": 1,
+              "strokeBottomWeight": 0,
+              "strokeLeftWeight": 0,
               "effects": [],
               "opacity": 1,
               "children": [
@@ -4009,6 +4047,23 @@
               "paddingLeft": 50,
               "clipsContent": true,
               "cornerRadius": 0,
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.12549019607843137,
+                    "g": 0.11764705882352941,
+                    "b": 0.09803921568627451
+                  },
+                  "opacity": 1
+                }
+              ],
+              "strokeWeight": 1,
+              "strokeAlign": "INSIDE",
+              "strokeTopWeight": 0,
+              "strokeRightWeight": 1,
+              "strokeBottomWeight": 0,
+              "strokeLeftWeight": 0,
               "effects": [],
               "opacity": 1,
               "children": [
@@ -4195,6 +4250,23 @@
               "paddingLeft": 50,
               "clipsContent": true,
               "cornerRadius": 0,
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.12549019607843137,
+                    "g": 0.11764705882352941,
+                    "b": 0.09803921568627451
+                  },
+                  "opacity": 1
+                }
+              ],
+              "strokeWeight": 1,
+              "strokeAlign": "INSIDE",
+              "strokeTopWeight": 0,
+              "strokeRightWeight": 1,
+              "strokeBottomWeight": 0,
+              "strokeLeftWeight": 0,
               "effects": [],
               "opacity": 1,
               "children": [
@@ -4943,19 +5015,6 @@
                   "paddingLeft": 44,
                   "clipsContent": true,
                   "cornerRadius": 0,
-                  "strokes": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0,
-                        "g": 0,
-                        "b": 0
-                      },
-                      "opacity": 0
-                    }
-                  ],
-                  "strokeWeight": 1,
-                  "strokeAlign": "INSIDE",
                   "effects": [],
                   "opacity": 1,
                   "children": [
@@ -5267,19 +5326,6 @@
                   "paddingLeft": 44,
                   "clipsContent": true,
                   "cornerRadius": 0,
-                  "strokes": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0,
-                        "g": 0,
-                        "b": 0
-                      },
-                      "opacity": 0
-                    }
-                  ],
-                  "strokeWeight": 1,
-                  "strokeAlign": "INSIDE",
                   "effects": [],
                   "opacity": 1,
                   "children": [
@@ -5591,19 +5637,6 @@
                   "paddingLeft": 44,
                   "clipsContent": true,
                   "cornerRadius": 0,
-                  "strokes": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0,
-                        "g": 0,
-                        "b": 0
-                      },
-                      "opacity": 0
-                    }
-                  ],
-                  "strokeWeight": 1,
-                  "strokeAlign": "INSIDE",
                   "effects": [],
                   "opacity": 1,
                   "children": [
@@ -7425,6 +7458,10 @@
           ],
           "strokeWeight": 1,
           "strokeAlign": "INSIDE",
+          "strokeTopWeight": 1,
+          "strokeRightWeight": 0,
+          "strokeBottomWeight": 1,
+          "strokeLeftWeight": 0,
           "effects": [],
           "opacity": 1,
           "children": [
@@ -8454,6 +8491,10 @@
           ],
           "strokeWeight": 1,
           "strokeAlign": "INSIDE",
+          "strokeTopWeight": 1,
+          "strokeRightWeight": 0,
+          "strokeBottomWeight": 0,
+          "strokeLeftWeight": 0,
           "effects": [],
           "opacity": 1,
           "children": [
@@ -9933,6 +9974,10 @@
           ],
           "strokeWeight": 1,
           "strokeAlign": "INSIDE",
+          "strokeTopWeight": 1,
+          "strokeRightWeight": 0,
+          "strokeBottomWeight": 0,
+          "strokeLeftWeight": 0,
           "effects": [],
           "opacity": 1,
           "layoutMode": "HORIZONTAL",

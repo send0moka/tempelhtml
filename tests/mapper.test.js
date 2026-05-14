@@ -44,6 +44,18 @@ function baseComputed(overrides = {}) {
     borderWidth: '0px',
     borderColor: 'rgba(0, 0, 0, 0)',
     borderStyle: 'none',
+    borderTopWidth: '0px',
+    borderRightWidth: '0px',
+    borderBottomWidth: '0px',
+    borderLeftWidth: '0px',
+    borderTopColor: 'rgba(0, 0, 0, 0)',
+    borderRightColor: 'rgba(0, 0, 0, 0)',
+    borderBottomColor: 'rgba(0, 0, 0, 0)',
+    borderLeftColor: 'rgba(0, 0, 0, 0)',
+    borderTopStyle: 'none',
+    borderRightStyle: 'none',
+    borderBottomStyle: 'none',
+    borderLeftStyle: 'none',
     boxShadow: 'none',
     overflow: 'visible',
     overflowX: 'visible',
@@ -334,6 +346,85 @@ test('preserves inline SVG markup as a single SVG node', () => {
   expect(builtSvg.height).toBe(403);
   expect(builtSvg.opacity).toBe(0.15);
   expect(builtSvg.children).toBeUndefined();
+});
+
+test('maps one-sided css borders to individual Figma stroke weights', () => {
+  const link = frameNode({
+    tag: 'a',
+    classList: ['editorial-link'],
+    rect: { x: 0, y: 0, width: 120, height: 18 },
+    computed: {
+      borderWidth: '0px 0px 1px',
+      borderColor: 'rgb(245, 242, 237) rgb(245, 242, 237) rgba(245, 242, 237, 0.4)',
+      borderStyle: 'none none solid',
+      borderBottomWidth: '1px',
+      borderBottomColor: 'rgba(245, 242, 237, 0.4)',
+      borderBottomStyle: 'solid',
+    },
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 300, height: 120 },
+    children: [link],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtLink = tree.children[0];
+
+  expect(builtLink.strokes).toHaveLength(1);
+  expect(builtLink.strokeTopWeight).toBe(0);
+  expect(builtLink.strokeRightWeight).toBe(0);
+  expect(builtLink.strokeBottomWeight).toBe(1);
+  expect(builtLink.strokeLeftWeight).toBe(0);
+  expect(builtLink.strokes[0].opacity).toBeCloseTo(0.4, 2);
+});
+
+test('maps inline-block text wrappers to horizontal auto layout', () => {
+  const link = frameNode({
+    tag: 'a',
+    classList: ['editorial-link'],
+    rect: { x: 0, y: 0, width: 119, height: 18 },
+    computed: {
+      display: 'inline-block',
+      paddingBottom: '2px',
+      borderWidth: '0px 0px 1px',
+      borderColor: 'rgb(245, 242, 237) rgb(245, 242, 237) rgba(245, 242, 237, 0.4)',
+      borderStyle: 'none none solid',
+      borderBottomWidth: '1px',
+      borderBottomColor: 'rgba(245, 242, 237, 0.4)',
+      borderBottomStyle: 'solid',
+    },
+    children: [
+      textContainerNode({
+        tag: 'span',
+        text: 'Read Our Story',
+        rect: { x: 0, y: 0, width: 119, height: 14 },
+        computed: {
+          fontFamily: 'Satoshi, sans-serif',
+          fontSize: '10.88px',
+          fontWeight: '500',
+          letterSpacing: '1.9584px',
+          textAlign: 'center',
+          textTransform: 'uppercase',
+        },
+      }),
+    ],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 300, height: 120 },
+    children: [link],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtLink = tree.children[0];
+
+  expect(builtLink.layoutMode).toBe('HORIZONTAL');
+  expect(builtLink.primaryAxisAlignItems).toBe('MIN');
+  expect(builtLink.counterAxisAlignItems).toBe('MIN');
+  expect(builtLink.strokeBottomWeight).toBe(1);
+  expect(builtLink.children).toHaveLength(1);
+  expect(builtLink.children[0].type).toBe('TEXT');
 });
 
 test('maps centered flex text containers to centered Figma text alignment', () => {

@@ -82,9 +82,14 @@ function buildNode(node, parentContext, ctx, path) {
   // Frame node
   const isGrid = computed.display === 'grid';
   const isFlex = computed.display === 'flex' || computed.display === 'inline-flex';
+  const isInlineBlock = computed.display === 'inline-block';
   const isAbsolute = computed.position === 'absolute' || computed.position === 'fixed';
 
-  const layout = isFlex ? getRenderableFlexLayout(node) : null;
+  const layout = isFlex
+    ? getRenderableFlexLayout(node)
+    : isInlineBlock
+      ? getRenderableInlineLayout(node)
+      : null;
 
   // Check if a grid strategy was provided for this element
   const gridClass = classList?.find(c => ctx.gridStrategies?.[`.${c}`]);
@@ -662,6 +667,33 @@ function getRenderableGridStrategy(node, gridStrategy) {
     ...gridStrategy.outerFrame,
     layoutMode: axis,
     itemSpacing: measureAxisSpacing(node.children, axis),
+  };
+}
+
+function getRenderableInlineLayout(node) {
+  if (!node?.computed || node.computed.display !== 'inline-block') {
+    return null;
+  }
+
+  const children = Array.isArray(node.children) ? node.children.filter(Boolean) : [];
+  if (children.length === 0) {
+    return null;
+  }
+
+  if (children.some((child) => !child?.rect || isAbsoluteLikeNode(child))) {
+    return null;
+  }
+
+  const detectedAxis = detectLinearChildAxis(children);
+  if (detectedAxis === 'VERTICAL') {
+    return null;
+  }
+
+  return {
+    layoutMode: 'HORIZONTAL',
+    primaryAxisAlignItems: 'MIN',
+    counterAxisAlignItems: 'MIN',
+    itemSpacing: measureAxisSpacing(children, 'HORIZONTAL'),
   };
 }
 

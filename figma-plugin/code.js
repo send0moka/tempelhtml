@@ -1487,6 +1487,10 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
     frame.strokes = spec.strokes;
     frame.strokeWeight = spec.strokeWeight || 1;
     frame.strokeAlign = spec.strokeAlign || 'INSIDE';
+    if (spec.strokeTopWeight !== undefined) frame.strokeTopWeight = spec.strokeTopWeight;
+    if (spec.strokeRightWeight !== undefined) frame.strokeRightWeight = spec.strokeRightWeight;
+    if (spec.strokeBottomWeight !== undefined) frame.strokeBottomWeight = spec.strokeBottomWeight;
+    if (spec.strokeLeftWeight !== undefined) frame.strokeLeftWeight = spec.strokeLeftWeight;
   }
   if (spec.effects && spec.effects.length > 0) {
     applyFrameEffects(frame, spec.effects);
@@ -1904,6 +1908,10 @@ function copyFramePresentationProps(source, target) {
   copyNodeProp(source, target, 'strokes');
   copyNodeProp(source, target, 'strokeWeight');
   copyNodeProp(source, target, 'strokeAlign');
+  copyNodeProp(source, target, 'strokeTopWeight');
+  copyNodeProp(source, target, 'strokeRightWeight');
+  copyNodeProp(source, target, 'strokeBottomWeight');
+  copyNodeProp(source, target, 'strokeLeftWeight');
   copyNodeProp(source, target, 'effects');
   copyNodeProp(source, target, 'opacity');
   copyNodeProp(source, target, 'clipsContent');

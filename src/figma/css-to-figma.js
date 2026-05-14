@@ -248,19 +248,107 @@ function splitCssLayers(css) {
  * border → Figma strokes
  */
 export function mapBorder(computed) {
-  const width = parsePx(computed.borderWidth);
-  if (width === 0 || computed.borderStyle === 'none') return {};
+  const sides = getBorderSides(computed);
+  const visibleSides = Object.values(sides).filter((side) => isRenderableBorderSide(side));
+  if (visibleSides.length === 0) return {};
 
-  const color = cssColorToFigma(computed.borderColor);
-  return {
+  const color = cssColorToFigma(visibleSides[0].color);
+  const result = {
     strokes: [{
       type: 'SOLID',
       color: { r: color.r, g: color.g, b: color.b },
       opacity: color.a,
     }],
-    strokeWeight: width,
+    strokeWeight: visibleSides[0].width,
     strokeAlign: 'INSIDE', // CSS border-box behavior
   };
+
+  if (!hasUniformBorder(sides)) {
+    result.strokeTopWeight = isRenderableBorderSide(sides.top) ? sides.top.width : 0;
+    result.strokeRightWeight = isRenderableBorderSide(sides.right) ? sides.right.width : 0;
+    result.strokeBottomWeight = isRenderableBorderSide(sides.bottom) ? sides.bottom.width : 0;
+    result.strokeLeftWeight = isRenderableBorderSide(sides.left) ? sides.left.width : 0;
+  }
+
+  return result;
+}
+
+function getBorderSides(computed) {
+  return {
+    top: getBorderSide(computed, 'Top', 0),
+    right: getBorderSide(computed, 'Right', 1),
+    bottom: getBorderSide(computed, 'Bottom', 2),
+    left: getBorderSide(computed, 'Left', 3),
+  };
+}
+
+function getBorderSide(computed, sideName, shorthandIndex) {
+  const lowerSide = sideName.toLowerCase();
+  return {
+    width: parsePx(computed[`border${sideName}Width`] ?? getCssBoxValue(computed.borderWidth, shorthandIndex)),
+    style: computed[`border${sideName}Style`] ?? getCssBoxValue(computed.borderStyle, shorthandIndex) ?? 'none',
+    color: computed[`border${sideName}Color`] ?? getCssBoxValue(computed.borderColor, shorthandIndex) ?? computed.color ?? '#000',
+    side: lowerSide,
+  };
+}
+
+function isRenderableBorderSide(side) {
+  return side.width > 0 && side.style !== 'none' && side.style !== 'hidden' && cssColorToFigma(side.color).a > 0;
+}
+
+function hasUniformBorder(sides) {
+  const values = Object.values(sides);
+  const first = values[0];
+  return values.every((side) =>
+    isRenderableBorderSide(side) &&
+    side.width === first.width &&
+    side.style === first.style &&
+    normalizeCssValue(side.color) === normalizeCssValue(first.color)
+  );
+}
+
+function getCssBoxValue(value, index) {
+  const parts = splitCssWhitespaceList(value);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return index === 0 || index === 2 ? parts[0] : parts[1];
+  if (parts.length === 3) return index === 0 ? parts[0] : index === 2 ? parts[2] : parts[1];
+  return parts[index] ?? null;
+}
+
+function splitCssWhitespaceList(value) {
+  const source = String(value || '').trim();
+  if (!source) return [];
+
+  const parts = [];
+  let current = '';
+  let depth = 0;
+
+  for (let index = 0; index < source.length; index++) {
+    const char = source[index];
+    if (char === '(') depth++;
+    if (char === ')') depth = Math.max(depth - 1, 0);
+
+    if (/\s/.test(char) && depth === 0) {
+      if (current.trim()) {
+        parts.push(current.trim());
+      }
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
+
+  return parts;
+}
+
+function normalizeCssValue(value) {
+  return String(value || '').replace(/\s+/g, '').toLowerCase();
 }
 
 // ─── EFFECTS ─────────────────────────────────────────────────────────────────

@@ -144,6 +144,9 @@ function walkDOMInBrowser() {
       cs.backgroundImage !== 'none' ||
       cs.borderStyle !== 'none' ||
       parseFloat(cs.borderTopWidth) > 0 ||
+      parseFloat(cs.borderRightWidth) > 0 ||
+      parseFloat(cs.borderBottomWidth) > 0 ||
+      parseFloat(cs.borderLeftWidth) > 0 ||
       parseFloat(cs.paddingTop) > 0 ||
       parseFloat(cs.paddingRight) > 0 ||
       parseFloat(cs.paddingBottom) > 0 ||
@@ -233,6 +236,18 @@ function walkDOMInBrowser() {
       borderWidth: cs.borderWidth,
       borderColor: cs.borderColor,
       borderStyle: cs.borderStyle,
+      borderTopWidth: cs.borderTopWidth,
+      borderRightWidth: cs.borderRightWidth,
+      borderBottomWidth: cs.borderBottomWidth,
+      borderLeftWidth: cs.borderLeftWidth,
+      borderTopColor: cs.borderTopColor,
+      borderRightColor: cs.borderRightColor,
+      borderBottomColor: cs.borderBottomColor,
+      borderLeftColor: cs.borderLeftColor,
+      borderTopStyle: cs.borderTopStyle,
+      borderRightStyle: cs.borderRightStyle,
+      borderBottomStyle: cs.borderBottomStyle,
+      borderLeftStyle: cs.borderLeftStyle,
       boxShadow: cs.boxShadow,
       overflow: cs.overflow,
       overflowX: cs.overflowX,

@@ -129,3 +129,27 @@ test('captures inline svg markup for native import', async () => {
   expect(svg.svgMarkup).toContain('stroke="rgb(43, 34, 32)"');
   expect(svg.svgMarkup).toContain('<circle');
 }, 30000);
+
+test('captures one-sided borders as visual boxes', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      .editorial-link {
+        border-bottom: 1px solid rgba(245, 242, 237, 0.4);
+        color: rgb(245, 242, 237);
+        display: inline-block;
+        text-decoration: none;
+      }
+    </style>
+    <a class="editorial-link" href="#">Read Our Story</a>
+  `, {
+    width: 320,
+    height: 120,
+  });
+
+  const link = find(domTree, (node) => node.classList?.includes('editorial-link'));
+  expect(link).toBeTruthy();
+  expect(link.isTextContainer).toBe(false);
+  expect(link.computed.borderBottomWidth).toBe('1px');
+  expect(link.computed.borderBottomStyle).toBe('solid');
+  expect(link.computed.borderBottomColor).toBe('rgba(245, 242, 237, 0.4)');
+}, 30000);

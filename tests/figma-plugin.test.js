@@ -13,6 +13,12 @@ function makeNode(type) {
     fills: [],
     strokes: [],
     characters: '',
+    strokeWeight: undefined,
+    strokeAlign: undefined,
+    strokeTopWeight: undefined,
+    strokeRightWeight: undefined,
+    strokeBottomWeight: undefined,
+    strokeLeftWeight: undefined,
     appendChild(child) {
       this.children.push(child);
       child.parent = this;
@@ -365,6 +371,52 @@ test('imports inline SVG markup as a rendered Figma node', async () => {
   expect(svg.width).toBe(366);
   expect(svg.height).toBe(403);
   expect(svg.opacity).toBe(0.15);
+});
+
+test('applies side-specific border weights for underline-like borders', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      {
+        name: 'a.editorial-link',
+        type: 'FRAME',
+        x: 0,
+        y: 0,
+        width: 120,
+        height: 18,
+        fills: [],
+        strokes: [{
+          type: 'SOLID',
+          color: { r: 1, g: 1, b: 1 },
+          opacity: 0.4,
+        }],
+        strokeWeight: 1,
+        strokeAlign: 'INSIDE',
+        strokeTopWeight: 0,
+        strokeRightWeight: 0,
+        strokeBottomWeight: 1,
+        strokeLeftWeight: 0,
+      },
+    ],
+  });
+
+  const link = page.children[0];
+  expect(link.strokeBottomWeight).toBe(1);
+  expect(link.strokeTopWeight).toBe(0);
+  expect(link.strokeRightWeight).toBe(0);
+  expect(link.strokeLeftWeight).toBe(0);
 });
 
 test('extends page-layout height when fixed header content is offset down', async () => {
