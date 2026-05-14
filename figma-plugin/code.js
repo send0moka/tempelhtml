@@ -1321,8 +1321,66 @@ function shouldAutoSizeSingleLineText(spec, parentLayoutMode) {
     return true;
   }
 
+  if (isTightSingleLineTextBox(spec)) {
+    return true;
+  }
+
   const align = String(spec.textAlignHorizontal || 'LEFT').toUpperCase();
   return align === 'LEFT';
+}
+
+function isTightSingleLineTextBox(spec) {
+  const width = pickNumber(spec.width, 0);
+  const estimatedTextWidth = estimateSingleLineTextWidth(spec);
+  if (width <= 0 || estimatedTextWidth <= 0) {
+    return false;
+  }
+
+  return width <= estimatedTextWidth * 1.75;
+}
+
+function estimateSingleLineTextWidth(spec) {
+  const text = String(spec.characters || '').replace(/\s+/g, ' ').trim();
+  const fontSize = pickNumber(spec.fontSize, 16);
+  if (!text || fontSize <= 0) {
+    return 0;
+  }
+
+  let emWidth = 0;
+  for (let index = 0; index < text.length; index++) {
+    emWidth += estimateGlyphEmWidth(text[index]);
+  }
+
+  const tracking = Math.max(getLetterSpacingPx(spec.letterSpacing, fontSize), 0);
+  return (emWidth * fontSize) + (tracking * Math.max(text.length - 1, 0));
+}
+
+function estimateGlyphEmWidth(character) {
+  if (/\s/.test(character)) return 0.33;
+  if (/[ilI1|.,:;!]/.test(character)) return 0.34;
+  if (/[mwMW@#%&]/.test(character)) return 0.82;
+  if (/[A-Z0-9]/.test(character)) return 0.62;
+  return 0.56;
+}
+
+function getLetterSpacingPx(letterSpacing, fontSize) {
+  if (!letterSpacing) {
+    return 0;
+  }
+
+  if (typeof letterSpacing === 'number') {
+    return letterSpacing;
+  }
+
+  if (letterSpacing.unit === 'PIXELS') {
+    return Number(letterSpacing.value) || 0;
+  }
+
+  if (letterSpacing.unit === 'PERCENT') {
+    return (fontSize * (Number(letterSpacing.value) || 0)) / 100;
+  }
+
+  return 0;
 }
 
 function isRenderedSingleLineText(spec) {

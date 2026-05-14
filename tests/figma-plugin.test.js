@@ -300,17 +300,27 @@ test('auto-sizes rendered single-line text without class-specific widths', async
         textAlignHorizontal: 'CENTER',
         fontSize: 14,
       }),
+      textSpec('div.announcement span', {
+        width: 510,
+        height: 15,
+        characters: 'COMPLIMENTARY SHIPPING ON ALL ORDERS - WORLDWIDE DELIVERY',
+        textAlignHorizontal: 'CENTER',
+        fontSize: 11.5,
+        letterSpacing: { value: 3, unit: 'PIXELS' },
+      }),
     ],
   });
 
   const initials = page.children[0].children[0];
   const role = page.children[1].children[0];
   const centeredBoxText = page.children[2];
+  const announcement = page.children[3];
 
   expect(initials.textAutoResize).toBe('WIDTH_AND_HEIGHT');
   expect(role.textAutoResize).toBe('WIDTH_AND_HEIGHT');
   expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
   expect(centeredBoxText.width).toBe(800);
+  expect(announcement.textAutoResize).toBe('WIDTH_AND_HEIGHT');
 });
 
 test('extends page-layout height when fixed header content is offset down', async () => {

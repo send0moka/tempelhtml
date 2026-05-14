@@ -1,4 +1,4 @@
-import { extractFromFile } from '../src/core/extractor.js';
+import { extractFromFile, extractFromHtml } from '../src/core/extractor.js';
 
 function find(node, predicate) {
   if (predicate(node)) return node;
@@ -27,4 +27,86 @@ test('preserves structured interactive children instead of collapsing them into 
   expect(btnGhost.tag).toBe('a');
   expect(btnGhost.isTextContainer).toBe(false);
   expect(btnGhost.computed.display).toBe('flex');
+}, 30000);
+
+test('skips pseudo-elements collapsed in the default state', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      .nav-link {
+        color: #111;
+        display: inline-block;
+        margin: 24px;
+        overflow: visible;
+        position: relative;
+      }
+
+      .nav-link::after {
+        background: currentColor;
+        bottom: -2px;
+        content: '';
+        height: 1px;
+        left: 0;
+        position: absolute;
+        transform-origin: left center;
+        width: 100%;
+      }
+
+      .nav-link.is-zero-width::after {
+        width: 0;
+      }
+
+      .nav-link.is-zero-width:hover::after {
+        width: 100%;
+      }
+
+      .nav-link.is-scaled::after {
+        transform: scaleX(0);
+      }
+
+      .nav-link.is-scaled:hover::after {
+        transform: scaleX(1);
+      }
+
+      .nav-link.is-clipped::after {
+        clip-path: inset(0 100% 0 0);
+      }
+
+      .nav-link.is-clipped:hover::after {
+        clip-path: inset(0);
+      }
+
+      .nav-link.is-translated {
+        overflow: hidden;
+      }
+
+      .nav-link.is-translated::after {
+        transform: translateX(-100%);
+      }
+
+      .nav-link.is-translated:hover::after {
+        transform: translateX(0);
+      }
+    </style>
+    <a class="nav-link is-zero-width" href="#">Shop</a>
+    <a class="nav-link is-scaled" href="#">Story</a>
+    <a class="nav-link is-clipped" href="#">Lookbook</a>
+    <a class="nav-link is-translated" href="#">Journal</a>
+    <a class="nav-link is-visible" href="#">Story</a>
+  `, {
+    width: 720,
+    height: 160,
+  });
+
+  const hiddenClasses = ['is-zero-width', 'is-scaled', 'is-clipped', 'is-translated'];
+  const visibleLink = find(domTree, (node) => node.classList?.includes('is-visible'));
+
+  for (const className of hiddenClasses) {
+    const hiddenLink = find(domTree, (node) => node.classList?.includes(className));
+    expect(hiddenLink).toBeTruthy();
+    expect(hiddenLink.pseudo.after).toBeNull();
+  }
+
+  expect(visibleLink).toBeTruthy();
+  expect(visibleLink.pseudo.after).toBeTruthy();
+  expect(visibleLink.pseudo.after.rect.width).toBeGreaterThan(0);
 }, 30000);

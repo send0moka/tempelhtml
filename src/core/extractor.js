@@ -234,6 +234,7 @@ function walkDOMInBrowser() {
       overflow: cs.overflow,
       overflowX: cs.overflowX,
       overflowY: cs.overflowY,
+      clipPath: cs.clipPath,
       mixBlendMode: cs.mixBlendMode,
       transform: cs.transform,
       // Typography
@@ -427,6 +428,95 @@ function walkDOMInBrowser() {
     return parseCssContent(cs.content) !== '' || hasSupportedPseudoVisual(cs);
   }
 
+  function isVisuallyHiddenPseudo(cs, rect = null, parentRect = null, parentStyles = null) {
+    if (!cs) {
+      return true;
+    }
+
+    const opacity = parseFloat(cs.opacity);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || (Number.isFinite(opacity) && opacity <= 0)) {
+      return true;
+    }
+
+    if (hasCollapsedTransform(cs.transform)) {
+      return true;
+    }
+
+    if (rect && isFullyClippedByClipPath(cs.clipPath, rect)) {
+      return true;
+    }
+
+    if (rect && parentRect && parentStyles && isClippedOutsideParent(rect, parentRect, parentStyles)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function hasCollapsedTransform(transformValue) {
+    if (!transformValue || transformValue === 'none') {
+      return false;
+    }
+
+    const scale = parseTransformScale(transformValue);
+    if (!scale) {
+      return false;
+    }
+
+    const tolerance = 0.001;
+    return scale.x <= tolerance || scale.y <= tolerance;
+  }
+
+  function parseTransformScale(transformValue) {
+    const value = String(transformValue).trim();
+    const matrixMatch = value.match(/^matrix\(([^)]+)\)$/i);
+    if (matrixMatch) {
+      const values = parseTransformNumbers(matrixMatch[1]);
+      if (values.length === 6) {
+        return {
+          x: Math.hypot(values[0], values[1]),
+          y: Math.hypot(values[2], values[3]),
+        };
+      }
+    }
+
+    const matrix3dMatch = value.match(/^matrix3d\(([^)]+)\)$/i);
+    if (matrix3dMatch) {
+      const values = parseTransformNumbers(matrix3dMatch[1]);
+      if (values.length === 16) {
+        return {
+          x: Math.hypot(values[0], values[1], values[2]),
+          y: Math.hypot(values[4], values[5], values[6]),
+        };
+      }
+    }
+
+    return parseScaleFunction(value);
+  }
+
+  function parseTransformNumbers(value) {
+    return String(value)
+      .split(',')
+      .map((part) => parseFloat(part.trim()))
+      .filter((number) => Number.isFinite(number));
+  }
+
+  function parseScaleFunction(value) {
+    const scaleX = value.match(/scaleX\(\s*([-+]?\d*\.?\d+)/i);
+    const scaleY = value.match(/scaleY\(\s*([-+]?\d*\.?\d+)/i);
+    const scale = value.match(/scale\(\s*([-+]?\d*\.?\d+)(?:\s*,\s*([-+]?\d*\.?\d+))?/i);
+
+    if (scaleX || scaleY || scale) {
+      const uniformScale = scale ? Math.abs(parseFloat(scale[1])) : 1;
+      return {
+        x: scaleX ? Math.abs(parseFloat(scaleX[1])) : uniformScale,
+        y: scaleY ? Math.abs(parseFloat(scaleY[1])) : (scale?.[2] ? Math.abs(parseFloat(scale[2])) : uniformScale),
+      };
+    }
+
+    return null;
+  }
+
   function extractPseudoElementData(el, tag, parentStyles, pseudoStyles, pseudoType) {
     if (!hasRenderablePseudo(pseudoStyles)) {
       return null;
@@ -437,8 +527,20 @@ function walkDOMInBrowser() {
       return null;
     }
 
-    const rect = estimatePseudoTextRect(el, parentStyles, pseudoStyles, pseudoType);
-    if (rect.width === 0 && rect.height === 0) {
+    const parentRect = el.getBoundingClientRect();
+    const rect = estimatePseudoTextRect(parentRect, parentStyles, pseudoStyles, pseudoType);
+    const transformedRect = applyPseudoTransformRect(rect, pseudoStyles.transform);
+    const finalRect = transformedRect || rect;
+
+    if (isVisuallyHiddenPseudo(pseudoStyles, finalRect, parentRect, parentStyles)) {
+      return null;
+    }
+
+    if (!content && (finalRect.width <= 0 || finalRect.height <= 0)) {
+      return null;
+    }
+
+    if (finalRect.width === 0 && finalRect.height === 0) {
       return null;
     }
 
@@ -446,7 +548,7 @@ function walkDOMInBrowser() {
       name: `${buildPseudoName(el, tag)}::${pseudoType}`,
       type: content ? 'text' : 'box',
       content: content || null,
-      rect,
+      rect: finalRect,
       fillColor: pseudoStyles.color,
       opacity: Number.isFinite(parseFloat(pseudoStyles.opacity)) ? parseFloat(pseudoStyles.opacity) : 1,
       position: pseudoStyles.position,
@@ -475,8 +577,7 @@ function walkDOMInBrowser() {
       cs.boxShadow !== 'none';
   }
 
-  function estimatePseudoTextRect(el, parentStyles, pseudoStyles, pseudoType) {
-    const parentRect = el.getBoundingClientRect();
+  function estimatePseudoTextRect(parentRect, parentStyles, pseudoStyles, pseudoType) {
     const width = parseCssPx(pseudoStyles.width);
     const height = parseCssPx(pseudoStyles.height) || parseCssPx(pseudoStyles.lineHeight) || parseCssPx(pseudoStyles.fontSize);
     const position = pseudoStyles.position;
@@ -495,6 +596,157 @@ function walkDOMInBrowser() {
       width,
       height,
     };
+  }
+
+  function applyPseudoTransformRect(rect, transformValue) {
+    const matrix = parseCssTransformMatrix(transformValue);
+    if (!matrix) {
+      return rect;
+    }
+
+    const points = [
+      transformPoint(matrix, rect.x, rect.y),
+      transformPoint(matrix, rect.x + rect.width, rect.y),
+      transformPoint(matrix, rect.x, rect.y + rect.height),
+      transformPoint(matrix, rect.x + rect.width, rect.y + rect.height),
+    ];
+
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    return {
+      x: minX,
+      y: minY,
+      width: Math.max(maxX - minX, 0),
+      height: Math.max(maxY - minY, 0),
+    };
+  }
+
+  function parseCssTransformMatrix(transformValue) {
+    const value = String(transformValue || '').trim();
+    if (!value || value === 'none') {
+      return null;
+    }
+
+    const matrixMatch = value.match(/^matrix\(([^)]+)\)$/i);
+    if (matrixMatch) {
+      const values = parseTransformNumbers(matrixMatch[1]);
+      if (values.length === 6) {
+        return {
+          a: values[0],
+          b: values[1],
+          c: values[2],
+          d: values[3],
+          e: values[4],
+          f: values[5],
+        };
+      }
+    }
+
+    const matrix3dMatch = value.match(/^matrix3d\(([^)]+)\)$/i);
+    if (matrix3dMatch) {
+      const values = parseTransformNumbers(matrix3dMatch[1]);
+      if (values.length === 16) {
+        return {
+          a: values[0],
+          b: values[1],
+          c: values[4],
+          d: values[5],
+          e: values[12],
+          f: values[13],
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function transformPoint(matrix, x, y) {
+    return {
+      x: (matrix.a * x) + (matrix.c * y) + matrix.e,
+      y: (matrix.b * x) + (matrix.d * y) + matrix.f,
+    };
+  }
+
+  function isFullyClippedByClipPath(clipPath, rect) {
+    const value = String(clipPath || '').trim();
+    if (!value || value === 'none') {
+      return false;
+    }
+
+    const insetMatch = value.match(/^inset\((.+)\)$/i);
+    if (!insetMatch) {
+      return false;
+    }
+
+    const parts = splitInsetTokens(insetMatch[1]);
+    const [topToken, rightToken, bottomToken, leftToken] = normalizeInsetTokens(parts);
+    const top = resolveInsetValue(topToken, rect.height);
+    const right = resolveInsetValue(rightToken, rect.width);
+    const bottom = resolveInsetValue(bottomToken, rect.height);
+    const left = resolveInsetValue(leftToken, rect.width);
+
+    return rect.width - left - right <= 0 || rect.height - top - bottom <= 0;
+  }
+
+  function splitInsetTokens(value) {
+    return String(value)
+      .split(/\s+round\s+/i)[0]
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function normalizeInsetTokens(tokens) {
+    if (tokens.length === 1) {
+      return [tokens[0], tokens[0], tokens[0], tokens[0]];
+    }
+    if (tokens.length === 2) {
+      return [tokens[0], tokens[1], tokens[0], tokens[1]];
+    }
+    if (tokens.length === 3) {
+      return [tokens[0], tokens[1], tokens[2], tokens[1]];
+    }
+    return [tokens[0], tokens[1], tokens[2], tokens[3]];
+  }
+
+  function resolveInsetValue(token, size) {
+    const value = String(token || '').trim();
+    if (!value || value === 'auto') {
+      return 0;
+    }
+    if (value.endsWith('%')) {
+      const ratio = parseFloat(value);
+      return Number.isFinite(ratio) ? (ratio / 100) * size : 0;
+    }
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function isClippedOutsideParent(rect, parentRect, parentStyles) {
+    if (!clippingEnabled(parentStyles)) {
+      return false;
+    }
+
+    const intersectionWidth = Math.min(rect.x + rect.width, parentRect.x + parentRect.width) - Math.max(rect.x, parentRect.x);
+    const intersectionHeight = Math.min(rect.y + rect.height, parentRect.y + parentRect.height) - Math.max(rect.y, parentRect.y);
+
+    return intersectionWidth <= 0.5 || intersectionHeight <= 0.5;
+  }
+
+  function clippingEnabled(parentStyles) {
+    if (!parentStyles) {
+      return false;
+    }
+
+    return ['overflow', 'overflowX', 'overflowY'].some((prop) => {
+      const value = String(parentStyles[prop] || '').toLowerCase();
+      return value === 'hidden' || value === 'clip' || value === 'scroll' || value === 'auto';
+    });
   }
 
   function estimatePositionedPseudoRect(parentRect, pseudoStyles, width, height) {
