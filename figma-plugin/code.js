@@ -317,6 +317,8 @@ async function createLocalStylesFromTree(nodes) {
 
   const localPaintStyles = await getLocalStylesSafe('paint');
   const localTextStyles = await getLocalStylesSafe('text');
+  pruneGeneratedStyles(localPaintStyles, catalog.paintStyles);
+  pruneGeneratedStyles(localTextStyles, catalog.textStyles);
 
   if (typeof figma.createPaintStyle === 'function') {
     for (const def of catalog.paintStyles) {
@@ -355,18 +357,21 @@ function buildLocalStyleCatalog(nodes) {
       return;
     }
 
-    collectPaintDefinition(paintMap, spec.fills, getPaintUsage(spec, 'fill'));
-    collectPaintDefinition(paintMap, spec.strokes, getPaintUsage(spec, 'stroke'));
+    const seenPaintKeys = new Set();
+    const seenTextKeys = new Set();
+
+    collectPaintDefinition(paintMap, spec.fills, getPaintUsage(spec, 'fill'), seenPaintKeys);
+    collectPaintDefinition(paintMap, spec.strokes, getPaintUsage(spec, 'stroke'), seenPaintKeys);
 
     if (spec.type === 'TEXT') {
-      collectTextDefinition(textMap, spec);
+      collectTextDefinition(textMap, spec, seenTextKeys);
 
       const textRuns = spec.textRuns || [];
       for (let index = 0; index < textRuns.length; index++) {
         const run = textRuns[index];
-        collectTextDefinition(textMap, run);
-        collectPaintDefinition(paintMap, run && run.fills, 'text fill');
-        collectPaintDefinition(paintMap, run && run.strokes, 'text stroke');
+        collectTextDefinition(textMap, run, seenTextKeys);
+        collectPaintDefinition(paintMap, run && run.fills, 'text fill', seenPaintKeys);
+        collectPaintDefinition(paintMap, run && run.strokes, 'text stroke', seenPaintKeys);
       }
     }
 
@@ -382,14 +387,16 @@ function buildLocalStyleCatalog(nodes) {
 
   const paintStyles = Object.keys(paintMap).map((key) => paintMap[key]);
   const textStyles = Object.keys(textMap).map((key) => textMap[key]);
+  const reusablePaintStyles = paintStyles.filter(isReusableLocalStyleDefinition);
+  const reusableTextStyles = textStyles.filter(isReusableLocalStyleDefinition);
 
-  assignPaintStyleNames(paintStyles);
-  assignTextStyleNames(textStyles);
+  assignPaintStyleNames(reusablePaintStyles);
+  assignTextStyleNames(reusableTextStyles);
 
-  return { paintStyles, textStyles };
+  return { paintStyles: reusablePaintStyles, textStyles: reusableTextStyles };
 }
 
-function collectPaintDefinition(map, paints, usage) {
+function collectPaintDefinition(map, paints, usage, seenKeys = null) {
   const key = makePaintStyleKey(paints);
   if (!key) {
     return;
@@ -405,10 +412,15 @@ function collectPaintDefinition(map, paints, usage) {
   }
 
   map[key].usages[usage] = (map[key].usages[usage] || 0) + 1;
-  map[key].count++;
+  if (!seenKeys || !seenKeys.has(key)) {
+    map[key].count++;
+    if (seenKeys) {
+      seenKeys.add(key);
+    }
+  }
 }
 
-function collectTextDefinition(map, spec) {
+function collectTextDefinition(map, spec, seenKeys = null) {
   const style = normalizeTextStyleInput(spec);
   if (!style) {
     return;
@@ -427,7 +439,51 @@ function collectTextDefinition(map, spec) {
     };
   }
 
-  map[key].count++;
+  if (!seenKeys || !seenKeys.has(key)) {
+    map[key].count++;
+    if (seenKeys) {
+      seenKeys.add(key);
+    }
+  }
+}
+
+function isReusableLocalStyleDefinition(def) {
+  return Boolean(def && def.count > 1);
+}
+
+function pruneGeneratedStyles(localStyles, defs) {
+  if (!Array.isArray(localStyles) || localStyles.length === 0) {
+    return;
+  }
+
+  const keep = new Set();
+  for (let index = 0; index < (defs || []).length; index++) {
+    const def = defs[index];
+    if (def && def.name) {
+      keep.add(def.name);
+    }
+  }
+
+  for (let index = 0; index < localStyles.length; index++) {
+    const style = localStyles[index];
+    if (!style || !style.name) {
+      continue;
+    }
+
+    if (!style.name.startsWith(`${STYLE_NAMESPACE} / `)) {
+      continue;
+    }
+
+    if (keep.has(style.name)) {
+      continue;
+    }
+
+    try {
+      if (typeof style.remove === 'function') {
+        style.remove();
+      }
+    } catch (err) {}
+  }
 }
 
 function getPaintUsage(spec, kind) {

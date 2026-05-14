@@ -41,8 +41,12 @@ function makeNode(type) {
 
 function createFigmaMock() {
   const page = makeNode('PAGE');
+  const paintStyles = [];
+  const textStyles = [];
   return {
     page,
+    paintStyles,
+    textStyles,
     figma: {
       ui: {
         onmessage: null,
@@ -70,16 +74,31 @@ function createFigmaMock() {
       },
       async loadFontAsync() {},
       async getLocalPaintStylesAsync() {
-        return [];
+        return paintStyles;
       },
       async getLocalTextStylesAsync() {
-        return [];
+        return textStyles;
       },
       createPaintStyle() {
-        return { id: 'paint-style', name: '', paints: [], description: '' };
+        return {
+          id: `paint-style-${paintStyles.length + 1}`,
+          name: '',
+          paints: [],
+          description: '',
+          remove() {
+            this.removed = true;
+          },
+        };
       },
       createTextStyle() {
-        return { id: 'text-style', name: '', description: '' };
+        return {
+          id: `text-style-${textStyles.length + 1}`,
+          name: '',
+          description: '',
+          remove() {
+            this.removed = true;
+          },
+        };
       },
     },
   };
@@ -332,6 +351,92 @@ test('auto-sizes rendered single-line text without class-specific widths', async
   expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
   expect(centeredBoxText.width).toBe(800);
   expect(announcement.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+});
+
+test('creates local styles only for reusable values and prunes stale generated styles', async () => {
+  const { figma, paintStyles, textStyles } = createFigmaMock();
+  paintStyles.push(
+    {
+      id: 'stale-paint',
+      name: 'TempelHTML / Color / Purple / 900 / OLD',
+      paints: [],
+      remove() {
+        this.removed = true;
+      },
+    },
+    {
+      id: 'custom-paint',
+      name: 'Brand / Color / Neutral / 50',
+      paints: [],
+      remove() {
+        this.removed = true;
+      },
+    }
+  );
+  textStyles.push({
+    id: 'stale-text',
+    name: 'TempelHTML / Typography / Body / XS / Regular / OLD',
+    remove() {
+      this.removed = true;
+    },
+  });
+
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  const sharedFill = [{
+    type: 'SOLID',
+    color: { r: 0.96, g: 0.95, b: 0.93 },
+    opacity: 1,
+  }];
+  const oneOffFill = [{
+    type: 'SOLID',
+    color: { r: 0.2, g: 0.1, b: 0.08 },
+    opacity: 1,
+  }];
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      textSpec('p.first', {
+        characters: 'Shared copy one',
+        fontSize: 16,
+        fills: sharedFill,
+      }),
+      textSpec('p.second', {
+        characters: 'Shared copy two',
+        fontSize: 16,
+        fills: sharedFill,
+      }),
+      textSpec('h1.once', {
+        characters: 'One off heading',
+        fontSize: 48,
+        fills: oneOffFill,
+      }),
+    ],
+  });
+
+  const activePaintStyles = paintStyles.filter((style) => !style.removed);
+  const activeTextStyles = textStyles.filter((style) => !style.removed);
+  const generatedPaintStyles = activePaintStyles.filter((style) => style.name.startsWith('TempelHTML / '));
+  const generatedTextStyles = activeTextStyles.filter((style) => style.name.startsWith('TempelHTML / '));
+
+  expect(paintStyles.find((style) => style.id === 'stale-paint').removed).toBe(true);
+  expect(textStyles.find((style) => style.id === 'stale-text').removed).toBe(true);
+  expect(paintStyles.find((style) => style.id === 'custom-paint').removed).toBeUndefined();
+
+  expect(generatedPaintStyles).toHaveLength(1);
+  expect(generatedPaintStyles[0].paints).toEqual(sharedFill);
+  expect(generatedTextStyles).toHaveLength(1);
+  expect(generatedTextStyles[0].fontSize).toBe(16);
 });
 
 test('imports inline SVG markup as a rendered Figma node', async () => {
