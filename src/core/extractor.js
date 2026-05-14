@@ -4,7 +4,7 @@
  * and bounding rects for every DOM element.
  */
 
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-core';
 import { existsSync, statSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { pathToFileURL } from 'url';
