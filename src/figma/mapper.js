@@ -37,21 +37,35 @@ export function buildFigmaTree({ annotated }, { pseudoElements = [], gridStrateg
 }
 
 function buildNode(node, parentContext, ctx, path) {
-  const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer, _pageLayout, _role } = node;
+  const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer, _pageLayout, _role, svgMarkup } = node;
   const resolvedRect = resolveRenderedRect(node, parentContext);
   const parentResolvedRect = parentContext?.resolvedRect ?? null;
   const isLeafText = Boolean(text) && children.length === 0;
   const isText = isLeafText && Boolean(isTextContainer);
+  const isSvg = tag === 'svg' && Boolean(svgMarkup);
 
   const base = {
     id: buildStableId(tag, classList, path),
     name: buildName(tag, classList),
-    type: isText && text ? 'TEXT' : 'FRAME',
+    type: isSvg ? 'SVG' : (isText && text ? 'TEXT' : 'FRAME'),
     x: Math.round(resolvedRect.x - (parentResolvedRect?.x ?? 0)),
     y: Math.round(resolvedRect.y - (parentResolvedRect?.y ?? 0)),
     width: Math.round(resolvedRect.width),
     height: Math.round(resolvedRect.height),
   };
+
+  if (isSvg) {
+    const isAbsolute = computed.position === 'absolute' || computed.position === 'fixed';
+    return {
+      ...base,
+      _svgMarkup: svgMarkup,
+      opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
+      ...(isAbsolute ? { layoutPositioning: 'ABSOLUTE' } : {}),
+      ...(computed.mixBlendMode && computed.mixBlendMode !== 'normal' ? {
+        blendMode: computed.mixBlendMode.toUpperCase().replace(/-/g, '_'),
+      } : {}),
+    };
+  }
 
   if (base.type === 'TEXT') {
     return {

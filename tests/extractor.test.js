@@ -110,3 +110,22 @@ test('skips pseudo-elements collapsed in the default state', async () => {
   expect(visibleLink.pseudo.after).toBeTruthy();
   expect(visibleLink.pseudo.after.rect.width).toBeGreaterThan(0);
 }, 30000);
+
+test('captures inline svg markup for native import', async () => {
+  const { domTree } = await extractFromHtml(`
+    <svg class="collar-illustration" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M40 80 L80 40 L100 55 L120 40 L160 80" stroke="#2B2220" stroke-width="1.5" fill="none"/>
+      <circle cx="100" cy="80" r="3" fill="#2B2220" opacity="0.5"/>
+    </svg>
+  `, {
+    width: 240,
+    height: 240,
+  });
+
+  const svg = find(domTree, (node) => node.tag === 'svg');
+  expect(svg).toBeTruthy();
+  expect(svg.children).toHaveLength(0);
+  expect(svg.svgMarkup).toContain('<path');
+  expect(svg.svgMarkup).toContain('stroke="rgb(43, 34, 32)"');
+  expect(svg.svgMarkup).toContain('<circle');
+}, 30000);

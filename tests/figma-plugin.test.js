@@ -54,6 +54,11 @@ function createFigmaMock() {
       createComponent() {
         return makeNode('COMPONENT');
       },
+      createNodeFromSvg(svg) {
+        const node = makeNode('FRAME');
+        node.svgMarkup = svg;
+        return node;
+      },
       async listAvailableFontsAsync() {
         return [];
       },
@@ -321,6 +326,45 @@ test('auto-sizes rendered single-line text without class-specific widths', async
   expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
   expect(centeredBoxText.width).toBe(800);
   expect(announcement.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+});
+
+test('imports inline SVG markup as a rendered Figma node', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      {
+        name: 'svg.collar-illustration',
+        type: 'SVG',
+        x: 12,
+        y: 18,
+        width: 366,
+        height: 403,
+        opacity: 0.15,
+        _svgMarkup: '<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg"><path d="M40 80 L80 40" stroke="#2B2220" fill="none"/></svg>',
+      },
+    ],
+  });
+
+  const svg = page.children[0];
+  expect(svg.name).toBe('svg.collar-illustration');
+  expect(svg.svgMarkup).toContain('<path');
+  expect(svg.x).toBe(12);
+  expect(svg.y).toBe(18);
+  expect(svg.width).toBe(366);
+  expect(svg.height).toBe(403);
+  expect(svg.opacity).toBe(0.15);
 });
 
 test('extends page-layout height when fixed header content is offset down', async () => {

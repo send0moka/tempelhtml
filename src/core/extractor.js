@@ -133,6 +133,7 @@ function walkDOMInBrowser() {
     const csBefore = window.getComputedStyle(el, '::before');
     const csAfter = window.getComputedStyle(el, '::after');
     const tag = el.tagName.toLowerCase();
+    const isSvg = tag === 'svg';
 
     // Skip invisible/zero-size elements
     if (rect.width === 0 && rect.height === 0 && cs.position === 'static') return null;
@@ -158,8 +159,9 @@ function walkDOMInBrowser() {
     const textData = rawText ? extractTextData(el) : null;
     const beforeData = extractPseudoElementData(el, tag, cs, csBefore, 'before');
     const afterData = extractPseudoElementData(el, tag, cs, csAfter, 'after');
+    const svgMarkup = isSvg ? serializeSvgElement(el, rect) : null;
 
-    const children = isTextContainer
+    const children = isSvg || isTextContainer
       ? []
       : Array.from(el.childNodes)
           .map((child) => getChildNode(child, el, cs, depth + 1))
@@ -174,6 +176,7 @@ function walkDOMInBrowser() {
       isTextContainer,
       rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       computed: extractRelevantStyles(cs),
+      ...(svgMarkup ? { svgMarkup } : {}),
       pseudo: {
         before: beforeData,
         after: afterData,
@@ -331,6 +334,83 @@ function walkDOMInBrowser() {
       webkitTextStrokeWidth: cs.webkitTextStrokeWidth,
       webkitTextStrokeColor: cs.webkitTextStrokeColor,
     };
+  }
+
+  function serializeSvgElement(svgEl, rect) {
+    const clone = svgEl.cloneNode(true);
+
+    clone.setAttribute('xmlns', clone.getAttribute('xmlns') || 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', formatSvgNumber(rect.width));
+    clone.setAttribute('height', formatSvgNumber(rect.height));
+    clone.removeAttribute('opacity');
+    if (clone.style) {
+      clone.style.removeProperty('opacity');
+    }
+
+    inlineSvgPresentationStyles(svgEl, clone);
+
+    return new XMLSerializer().serializeToString(clone);
+  }
+
+  function inlineSvgPresentationStyles(sourceRoot, cloneRoot) {
+    const sourceElements = [sourceRoot].concat(Array.from(sourceRoot.querySelectorAll('*')));
+    const cloneElements = [cloneRoot].concat(Array.from(cloneRoot.querySelectorAll('*')));
+
+    for (let index = 0; index < sourceElements.length; index++) {
+      const sourceEl = sourceElements[index];
+      const cloneEl = cloneElements[index];
+      if (!sourceEl || !cloneEl) continue;
+
+      cloneEl.removeAttribute('data-tempelhtml-animated');
+      const cs = window.getComputedStyle(sourceEl);
+      const isRoot = index === 0;
+
+      setSvgPresentationAttribute(cloneEl, 'fill', cs.fill);
+      setSvgPresentationAttribute(cloneEl, 'stroke', cs.stroke);
+      setSvgPresentationAttribute(cloneEl, 'stroke-width', cs.strokeWidth);
+      setSvgPresentationAttribute(cloneEl, 'stroke-linecap', cs.strokeLinecap);
+      setSvgPresentationAttribute(cloneEl, 'stroke-linejoin', cs.strokeLinejoin);
+      setSvgPresentationAttribute(cloneEl, 'stroke-miterlimit', cs.strokeMiterlimit);
+      setSvgPresentationAttribute(cloneEl, 'stroke-dasharray', cs.strokeDasharray);
+      setSvgPresentationAttribute(cloneEl, 'fill-rule', cs.fillRule);
+      setSvgPresentationAttribute(cloneEl, 'clip-rule', cs.clipRule);
+      setSvgPresentationAttribute(cloneEl, 'vector-effect', cs.vectorEffect);
+
+      if (!isRoot) {
+        setSvgPresentationAttribute(cloneEl, 'opacity', cs.opacity);
+        setSvgPresentationAttribute(cloneEl, 'fill-opacity', cs.fillOpacity);
+        setSvgPresentationAttribute(cloneEl, 'stroke-opacity', cs.strokeOpacity);
+      }
+    }
+  }
+
+  function setSvgPresentationAttribute(el, name, value) {
+    if (!isUsableSvgPresentationValue(value)) {
+      return;
+    }
+
+    el.setAttribute(name, normalizeSvgPresentationValue(value));
+  }
+
+  function isUsableSvgPresentationValue(value) {
+    if (value === undefined || value === null) {
+      return false;
+    }
+
+    const normalized = String(value).trim();
+    return normalized !== '' && normalized !== 'normal' && normalized !== 'auto';
+  }
+
+  function normalizeSvgPresentationValue(value) {
+    return String(value).trim();
+  }
+
+  function formatSvgNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return '1';
+    }
+    return String(Math.max(Math.round(number * 1000) / 1000, 1));
   }
 
   function getChildNode(child, parentEl, parentStyles, depth) {

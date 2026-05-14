@@ -1141,10 +1141,55 @@ function cloneValue(value) {
 // Node builder
 
 async function buildNode(spec, parentLayoutMode, styleRegistry) {
+  if (spec.type === 'SVG' || spec._svgMarkup) {
+    return await buildSvgNode(spec, parentLayoutMode, styleRegistry);
+  }
   if (spec.type === 'TEXT') {
     return await buildTextNode(spec, parentLayoutMode, styleRegistry);
   }
   return buildFrameNode(spec, parentLayoutMode, styleRegistry);
+}
+
+async function buildSvgNode(spec, parentLayoutMode, styleRegistry) {
+  if (typeof figma.createNodeFromSvg !== 'function' || !spec._svgMarkup) {
+    return buildFrameNode(Object.assign({}, spec, { type: 'FRAME', children: [] }), parentLayoutMode, styleRegistry);
+  }
+
+  try {
+    const node = figma.createNodeFromSvg(spec._svgMarkup);
+    node.name = spec.name;
+    node.x = spec.x || 0;
+    node.y = spec.y || 0;
+    resizeSceneNode(node, Math.max(spec.width || 1, 1), Math.max(spec.height || 1, 1));
+
+    if (spec.opacity !== undefined) {
+      node.opacity = spec.opacity;
+    }
+    if (spec.blendMode) {
+      try {
+        node.blendMode = spec.blendMode;
+      } catch (err) {}
+    }
+
+    return node;
+  } catch (err) {
+    return buildFrameNode(Object.assign({}, spec, { type: 'FRAME', children: [] }), parentLayoutMode, styleRegistry);
+  }
+}
+
+function resizeSceneNode(node, width, height) {
+  if (!node) {
+    return;
+  }
+
+  if (typeof node.resize === 'function') {
+    node.resize(width, height);
+    return;
+  }
+
+  if (typeof node.resizeWithoutConstraints === 'function') {
+    node.resizeWithoutConstraints(width, height);
+  }
 }
 
 async function buildTextNode(spec, parentLayoutMode, styleRegistry) {

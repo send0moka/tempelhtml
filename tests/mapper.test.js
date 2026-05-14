@@ -72,7 +72,7 @@ function baseComputed(overrides = {}) {
   };
 }
 
-function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0 }) {
+function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0, svgMarkup = null }) {
   return {
     tag,
     id: null,
@@ -82,6 +82,7 @@ function frameNode({ tag = 'div', classList = [], rect, computed = {}, children 
     isTextContainer: false,
     rect,
     computed: baseComputed(computed),
+    ...(svgMarkup ? { svgMarkup } : {}),
     pseudo,
     children,
     effectiveZ,
@@ -300,6 +301,39 @@ test('merges full-cover negative z pseudo backgrounds into the parent fill', () 
 
   expect(builtNav.children.some((child) => child.name.includes('[pseudo]'))).toBe(false);
   expect(builtNav.fills[0].type).toBe('GRADIENT_LINEAR');
+});
+
+test('preserves inline SVG markup as a single SVG node', () => {
+  const svgMarkup = '<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg"><path d="M40 80 L80 40" stroke="#2B2220" fill="none"/></svg>';
+  const svg = frameNode({
+    tag: 'svg',
+    classList: ['collar-illustration'],
+    rect: { x: 100, y: 120, width: 366, height: 403 },
+    computed: { opacity: '0.15' },
+    svgMarkup,
+    children: [
+      frameNode({
+        tag: 'path',
+        rect: { x: 160, y: 180, width: 40, height: 40 },
+      }),
+    ],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 800, height: 600 },
+    children: [svg],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtSvg = tree.children[0];
+
+  expect(builtSvg.type).toBe('SVG');
+  expect(builtSvg.name).toBe('svg.collar-illustration');
+  expect(builtSvg._svgMarkup).toBe(svgMarkup);
+  expect(builtSvg.width).toBe(366);
+  expect(builtSvg.height).toBe(403);
+  expect(builtSvg.opacity).toBe(0.15);
+  expect(builtSvg.children).toBeUndefined();
 });
 
 test('maps centered flex text containers to centered Figma text alignment', () => {
