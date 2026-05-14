@@ -22,6 +22,8 @@ const FIGMA_FONT_STYLES = {
   'Inter': ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black',
              'Thin Italic', 'ExtraLight Italic', 'Light Italic', 'Italic', 'Medium Italic',
              'SemiBold Italic', 'Bold Italic', 'ExtraBold Italic', 'Black Italic'],
+  Georgia: ['Regular', 'Italic', 'Bold', 'Bold Italic'],
+  'Courier New': ['Regular', 'Italic', 'Bold', 'Bold Italic'],
 };
 
 /**
@@ -56,7 +58,7 @@ export async function resolveFonts(domTree) {
   const fontMap = {};
   for (const key of needed) {
     const [family, weight, style] = key.split('|');
-    const resolved = resolveFont(cleanFamilyName(family), weight, style === 'italic');
+    const resolved = resolveFont(family, weight, style === 'italic');
     fontMap[key] = resolved;
   }
 
@@ -68,32 +70,75 @@ export async function resolveFonts(domTree) {
  * e.g. "'Playfair Display', serif" → "Playfair Display"
  */
 function cleanFamilyName(css) {
-  const first = css.split(',')[0].trim();
-  return first.replace(/['"]/g, '');
+  return getFontFamilyStack(css)[0] ?? '';
 }
 
 /**
  * Resolve to a specific Figma font, with fallback chain.
  */
-function resolveFont(family, weightStr, isItalic) {
+function resolveFont(cssFamily, weightStr, isItalic) {
+  const stack = getFontFamilyStack(cssFamily);
+  const family = cleanFamilyName(cssFamily);
   const weight = parseInt(weightStr) || 400;
   const styleName = WEIGHT_MAP[weight] ?? 'Regular';
   const italicSuffix = isItalic ? ' Italic' : '';
   const targetStyle = styleName === 'Regular' && isItalic ? 'Italic' : `${styleName}${italicSuffix}`;
 
-  // Try requested font
-  if (FIGMA_FONT_STYLES[family]?.includes(targetStyle)) {
-    return { family, style: targetStyle };
+  const candidates = [];
+  const availableStackFamily = stack.find((name) => FIGMA_FONT_STYLES[name]);
+  if (availableStackFamily) {
+    candidates.push(availableStackFamily);
+  } else {
+    const generic = getGenericFontFamily(stack);
+    if (generic === 'serif') {
+      candidates.push('Georgia');
+    } else if (generic === 'monospace') {
+      candidates.push('Courier New');
+    } else {
+      candidates.push('Inter');
+    }
   }
-  // Try Regular of requested font
-  if (FIGMA_FONT_STYLES[family]?.includes('Regular')) {
-    return { family, style: 'Regular' };
+
+  if (family && family !== candidates[0] && FIGMA_FONT_STYLES[family]) {
+    candidates.push(family);
   }
-  // Fallback to Inter
-  if (FIGMA_FONT_STYLES['Inter'].includes(targetStyle)) {
-    return { family: 'Inter', style: targetStyle };
+
+  if (!candidates.includes('Inter')) {
+    candidates.push('Inter');
   }
+
+  for (const candidate of candidates) {
+    const styles = FIGMA_FONT_STYLES[candidate];
+    if (!styles) continue;
+    if (styles.includes(targetStyle)) {
+      return { family: candidate, style: targetStyle };
+    }
+    if (styles.includes('Regular')) {
+      return { family: candidate, style: 'Regular' };
+    }
+  }
+
   return { family: 'Inter', style: 'Regular' };
+}
+
+function getFontFamilyStack(cssFamily) {
+  return String(cssFamily || '')
+    .split(',')
+    .map((part) => part.trim().replace(/['"]/g, ''))
+    .filter(Boolean);
+}
+
+function getGenericFontFamily(stack) {
+  if (!Array.isArray(stack) || stack.length === 0) {
+    return null;
+  }
+
+  const last = stack[stack.length - 1].toLowerCase();
+  if (last === 'serif' || last === 'sans-serif' || last === 'monospace') {
+    return last;
+  }
+
+  return null;
 }
 
 /**

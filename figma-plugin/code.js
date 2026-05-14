@@ -1385,6 +1385,11 @@ function applyTextSizing(text, spec, parentLayoutMode) {
   if (!spec.width) return;
   try {
     if (hasExplicitLineBreaks(spec.characters)) {
+      if (shouldPreserveTextWidthForAlignment(spec, parentLayoutMode)) {
+        text.textAutoResize = 'HEIGHT';
+        text.resize(Math.max(spec.width, 1), Math.max(spec.height || 1, 1));
+        return;
+      }
       text.textAutoResize = 'WIDTH_AND_HEIGHT';
       return;
     }
@@ -1407,6 +1412,15 @@ function applyTextSizing(text, spec, parentLayoutMode) {
 
 function hasExplicitLineBreaks(characters) {
   return String(characters || '').includes('\n');
+}
+
+function shouldPreserveTextWidthForAlignment(spec, parentLayoutMode) {
+  if (parentLayoutMode && parentLayoutMode !== 'NONE') {
+    return false;
+  }
+
+  const align = String(spec.textAlignHorizontal || '').toUpperCase();
+  return align === 'CENTER' || align === 'RIGHT';
 }
 
 function hasFixedTextBoxAlignment(spec) {
@@ -1844,14 +1858,17 @@ function shouldFixAxis(spec, children, axisRole) {
   const hasSurface = hasVisibleFrameSurface(spec);
 
   if (axisRole === 'primary') {
-    if (align === 'SPACE_BETWEEN' || align === 'CENTER' || align === 'MAX') {
+    if (align === 'CENTER' || align === 'MAX') {
+      return true;
+    }
+    if (align === 'SPACE_BETWEEN') {
       return children.length > 1 || hasSurface;
     }
     return hasSurface;
   }
 
   if (align === 'CENTER' || align === 'MAX' || align === 'STRETCH') {
-    return hasSurface;
+    return true;
   }
 
   return false;

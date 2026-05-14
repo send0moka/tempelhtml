@@ -39,6 +39,21 @@ function makeNode(type) {
   };
 }
 
+const AVAILABLE_FONT_NAMES = [
+  { family: 'Inter', style: 'Regular' },
+  { family: 'Inter', style: 'Italic' },
+  { family: 'Inter', style: 'Medium' },
+  { family: 'Inter', style: 'Bold' },
+  { family: 'Georgia', style: 'Regular' },
+  { family: 'Georgia', style: 'Italic' },
+  { family: 'Georgia', style: 'Bold' },
+  { family: 'Georgia', style: 'Bold Italic' },
+  { family: 'Courier New', style: 'Regular' },
+  { family: 'Courier New', style: 'Italic' },
+  { family: 'Playfair Display', style: 'Regular' },
+  { family: 'Playfair Display', style: 'Bold' },
+];
+
 function createFigmaMock() {
   const page = makeNode('PAGE');
   const paintStyles = [];
@@ -70,7 +85,7 @@ function createFigmaMock() {
         return node;
       },
       async listAvailableFontsAsync() {
-        return [];
+        return AVAILABLE_FONT_NAMES.map((fontName) => ({ fontName }));
       },
       async loadFontAsync() {},
       async getLocalPaintStylesAsync() {
@@ -241,6 +256,40 @@ test('uses width-and-height auto resize for explicit multiline text', async () =
   expect(title.width).toBe(0);
 });
 
+test('preserves centered multiline text box width outside auto layout', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      textSpec('h3', {
+        width: 316,
+        height: 67,
+        characters: 'The Art of\nLayering',
+        fontName: { family: 'Georgia', style: 'Regular' },
+        fontSize: 25.6,
+        textAlignHorizontal: 'CENTER',
+      }),
+    ],
+  });
+
+  const title = page.children[0];
+  expect(title.textAutoResize).toBe('HEIGHT');
+  expect(title.textAlignHorizontal).toBe('CENTER');
+  expect(title.width).toBe(316);
+  expect(title.height).toBe(67);
+});
+
 test('keeps centered flex text boxes fixed so vertical middle alignment can apply', async () => {
   const { figma, page } = createFigmaMock();
   const context = {
@@ -351,6 +400,50 @@ test('auto-sizes rendered single-line text without class-specific widths', async
   expect(centeredBoxText.textAutoResize).toBe('HEIGHT');
   expect(centeredBoxText.width).toBe(800);
   expect(announcement.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+});
+
+test('keeps single-child centered flex containers fixed when rendered free space matters', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      frameSpec('div.ba-divider', {
+        width: 60,
+        height: 120,
+        layoutMode: 'HORIZONTAL',
+        primaryAxisAlignItems: 'CENTER',
+        counterAxisAlignItems: 'CENTER',
+        children: [
+          frameSpec('div.ba-divider-inner', {
+            x: 30,
+            width: 1,
+            height: 120,
+            fills: [{
+              type: 'SOLID',
+              color: { r: 0.54, g: 0.51, b: 0.46 },
+              opacity: 1,
+            }],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const divider = page.children[0];
+  expect(divider.primaryAxisSizingMode).toBe('FIXED');
+  expect(divider.layoutSizingHorizontal).toBe('FIXED');
+  expect(divider.width).toBe(60);
 });
 
 test('creates local styles only for reusable values and prunes stale generated styles', async () => {
