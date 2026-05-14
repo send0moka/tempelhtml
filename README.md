@@ -1,3 +1,10 @@
+---
+title: tempelhtml
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # tempelhtml
 
 HTML to Figma converter with a local HTML-first flow.

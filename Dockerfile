@@ -9,8 +9,8 @@ COPY . .
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
-ENV PORT=3210
+ENV PORT=7860
 
-EXPOSE 3210
+EXPOSE 7860
 
 CMD ["npm", "start"]
