@@ -290,6 +290,39 @@ test('captures base64 image sources from img elements', async () => {
   expect(image.computed.objectFit).toBe('cover');
 }, 30000);
 
+test('captures rendered canvas content as image data', async () => {
+  const { domTree } = await extractFromHtml(`
+    <canvas class="chart" width="120" height="80" style="width: 120px; height: 80px;"></canvas>
+    <script>
+      const canvas = document.querySelector('.chart');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#07111f';
+      ctx.fillRect(0, 0, 120, 80);
+      ctx.strokeStyle = '#00b7ff';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(12, 60);
+      ctx.lineTo(42, 30);
+      ctx.lineTo(72, 42);
+      ctx.lineTo(108, 14);
+      ctx.stroke();
+    </script>
+  `, {
+    width: 180,
+    height: 120,
+  });
+
+  const canvas = find(domTree, (node) => node.tag === 'canvas');
+
+  expect(canvas).toBeTruthy();
+  expect(canvas.children).toHaveLength(0);
+  expect(canvas.imageData).toEqual(expect.objectContaining({
+    src: expect.stringMatching(/^data:image\/png;base64,/),
+    naturalWidth: 120,
+    naturalHeight: 80,
+  }));
+}, 30000);
+
 test('captures one-sided borders as visual boxes', async () => {
   const { domTree } = await extractFromHtml(`
     <style>

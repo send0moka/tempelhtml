@@ -43,7 +43,7 @@ function buildNode(node, parentContext, ctx, path) {
   const isLeafText = Boolean(text) && children.length === 0;
   const isText = isLeafText && Boolean(isTextContainer);
   const isSvg = tag === 'svg' && Boolean(svgMarkup);
-  const isImage = tag === 'img' && Boolean(imageData?.src);
+  const isImage = Boolean(imageData?.src) && (tag === 'img' || tag === 'canvas');
   const isAbsolute = isAbsoluteLikeNode(node) || node._layoutPositioning === 'ABSOLUTE';
   const childLayoutSizing = mapChildLayoutSizing(node, parentContext, resolvedRect);
 

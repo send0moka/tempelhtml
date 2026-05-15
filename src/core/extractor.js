@@ -137,6 +137,92 @@ async function stabilizePage(page) {
       return /^translate(?:3d|x|y)?\(/i.test(text);
     }
   });
+
+  await waitForCanvasPaint(page);
+}
+
+async function waitForCanvasPaint(page) {
+  const canvasCount = await page.locator('canvas').count();
+  if (canvasCount === 0) {
+    return;
+  }
+
+  try {
+    await page.waitForFunction(() => {
+      const canvases = Array.from(document.querySelectorAll('canvas'))
+        .filter((canvas) => {
+          const rect = canvas.getBoundingClientRect();
+          const cs = window.getComputedStyle(canvas);
+          const opacity = parseFloat(cs.opacity);
+          return rect.width > 0
+            && rect.height > 0
+            && cs.display !== 'none'
+            && cs.visibility !== 'hidden'
+            && (!Number.isFinite(opacity) || opacity > 0);
+        });
+
+      if (canvases.length === 0) {
+        return true;
+      }
+
+      const now = performance.now();
+      const state = window.__tempelhtmlCanvasCaptureState || {
+        startedAt: now,
+        lastSignature: '',
+        stableCount: 0,
+      };
+
+      const snapshots = canvases.map((canvas) => captureCanvasSnapshot(canvas));
+      const readableSnapshots = snapshots.filter((snapshot) => snapshot.readable);
+      if (readableSnapshots.length === 0) {
+        return true;
+      }
+
+      const signature = readableSnapshots.map((snapshot) => snapshot.signature).join('|');
+      if (signature && signature === state.lastSignature) {
+        state.stableCount += 1;
+      } else {
+        state.lastSignature = signature;
+        state.stableCount = 0;
+      }
+
+      window.__tempelhtmlCanvasCaptureState = state;
+      return state.stableCount >= 2 && now - state.startedAt >= 500;
+
+      function captureCanvasSnapshot(canvas) {
+        const width = Math.floor(canvas.width || 0);
+        const height = Math.floor(canvas.height || 0);
+        if (width <= 0 || height <= 0) {
+          return { readable: false };
+        }
+
+        let src = '';
+        try {
+          src = canvas.toDataURL('image/png');
+        } catch (err) {
+          return { readable: false };
+        }
+
+        canvas.__tempelhtmlCanvasCaptureSrc = src;
+        return {
+          readable: Boolean(src && src !== 'data:,'),
+          signature: `${width}x${height}:${src.length}:${hashString(src)}`,
+        };
+      }
+
+      function hashString(value) {
+        let hash = 2166136261;
+        const text = String(value || '');
+        for (let index = 0; index < text.length; index++) {
+          hash ^= text.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+    }, null, { timeout: 2500, polling: 80 });
+  } catch (err) {
+    // Continue with the best available canvas state instead of failing conversion.
+  }
 }
 
 function normalizeBaseUrl(baseUrl) {
@@ -212,6 +298,7 @@ function walkDOMInBrowser() {
     const tag = el.tagName.toLowerCase();
     const isSvg = tag === 'svg';
     const isImage = tag === 'img';
+    const isCanvas = tag === 'canvas';
 
     // Skip invisible/zero-size elements
     if (rect.width === 0 && rect.height === 0 && cs.position === 'static') return null;
@@ -243,9 +330,13 @@ function walkDOMInBrowser() {
     const afterData = extractPseudoElementData(el, tag, cs, csAfter, 'after');
     const formControl = extractFormControlData(el, tag, cs);
     const svgMarkup = isSvg ? serializeSvgElement(el, rect) : null;
-    const imageData = isImage ? extractImageData(el) : null;
+    const imageData = isImage
+      ? extractImageData(el)
+      : isCanvas
+        ? extractCanvasImageData(el)
+        : null;
 
-    const children = isSvg || isImage || isTextContainer
+    const children = isSvg || isImage || isCanvas || isTextContainer
       ? []
       : Array.from(el.childNodes)
           .map((child) => getChildNode(child, el, cs, depth + 1))
@@ -434,6 +525,32 @@ function walkDOMInBrowser() {
       alt: el.getAttribute('alt') || '',
       naturalWidth: Number.isFinite(el.naturalWidth) ? el.naturalWidth : 0,
       naturalHeight: Number.isFinite(el.naturalHeight) ? el.naturalHeight : 0,
+    };
+  }
+
+  function extractCanvasImageData(el) {
+    const width = Number(el.width) || 0;
+    const height = Number(el.height) || 0;
+    if (width <= 0 || height <= 0 || typeof el.toDataURL !== 'function') {
+      return null;
+    }
+
+    let src = String(el.__tempelhtmlCanvasCaptureSrc || '');
+    try {
+      src = src || el.toDataURL('image/png');
+    } catch (err) {
+      return null;
+    }
+
+    if (!src || src === 'data:,') {
+      return null;
+    }
+
+    return {
+      src,
+      alt: el.getAttribute('aria-label') || el.getAttribute('title') || '',
+      naturalWidth: width,
+      naturalHeight: height,
     };
   }
 

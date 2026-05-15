@@ -401,6 +401,36 @@ test('maps base64 img sources to image nodes', () => {
   expect(builtImg.cornerRadius).toBe(12);
 });
 
+test('maps captured canvas data to image nodes', () => {
+  const canvas = frameNode({
+    tag: 'canvas',
+    classList: ['chart'],
+    rect: { x: 24, y: 32, width: 320, height: 180 },
+    computed: {
+      objectFit: 'fill',
+    },
+    imageData: {
+      src: 'data:image/png;base64,aGVsbG8=',
+      alt: '',
+      naturalWidth: 640,
+      naturalHeight: 360,
+    },
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 400, height: 240 },
+    children: [canvas],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtCanvas = tree.children[0];
+
+  expect(builtCanvas.type).toBe('IMAGE');
+  expect(builtCanvas.name).toBe('canvas.chart');
+  expect(builtCanvas._image.src).toBe('data:image/png;base64,aGVsbG8=');
+  expect(builtCanvas._objectFit).toBe('fill');
+});
+
 test('orders children by effective z-index for Figma layer stacking', () => {
   const low = frameNode({
     tag: 'div',

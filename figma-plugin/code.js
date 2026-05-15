@@ -3,8 +3,8 @@
  * Figma Plugin main thread - receives HTML or JSON and creates Figma nodes.
  */
 
-// const DEFAULT_CONVERTER_URL = 'http://localhost:3210';
-const DEFAULT_CONVERTER_URL = 'https://jehian-tempelhtml.hf.space';
+const DEFAULT_CONVERTER_URL = 'http://localhost:3210';
+// const DEFAULT_CONVERTER_URL = 'https://jehian-tempelhtml.hf.space';
 const BENCHMARK_URL = 'https://figmaeval.vercel.app';
 
 figma.showUI(__html__, { width: 420, height: 450 });
@@ -27,10 +27,21 @@ figma.ui.onmessage = async (msg) => {
       await convertAndBuild(msg.payload);
     }
   } catch (err) {
-    figma.ui.postMessage({ type: 'ERROR', message: err.message });
-    console.error('[tempelhtml]', err);
+    const message = formatErrorForDisplay(err);
+    figma.ui.postMessage({ type: 'ERROR', message });
+    console.error('[tempelhtml]', message, err && err.stack ? err.stack : err);
   }
 };
+
+function formatErrorForDisplay(err) {
+  if (!err) {
+    return 'Unknown tempelhtml error.';
+  }
+  if (err.message) {
+    return err.message;
+  }
+  return String(err);
+}
 
 async function convertAndBuild(payload) {
   const serverUrl = payload.serverUrl || DEFAULT_CONVERTER_URL;
@@ -1605,7 +1616,7 @@ function mapObjectFitToImageScaleMode(objectFit) {
     return 'FIT';
   }
   if (fit === 'fill') {
-    return 'STRETCH';
+    return 'FILL';
   }
   return 'FILL';
 }
