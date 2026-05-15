@@ -337,10 +337,13 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
             Mobile
           </button>
+          <button type="button" class="chip" id="allViewportsBtn">
+            All
+          </button>
         </div>
         <div class="width-row">
           <div class="field">
-            <label for="widthInput">Width</label>
+            <label id="widthLabel" for="widthInput">Desktop width</label>
             <input id="widthInput" type="number" min="320" step="1" value="1440" />
           </div>
         </div>
@@ -371,17 +374,21 @@
     const fileInput = document.getElementById('fileInput');
     const htmlInput = document.getElementById('htmlInput');
     const widthInput = document.getElementById('widthInput');
+    const widthLabel = document.getElementById('widthLabel');
     const buildBtn = document.getElementById('buildBtn');
     const progressFill = document.getElementById('progressFill');
     const statusEl = document.getElementById('status');
     const fileMeta = document.getElementById('fileMeta');
     const benchmarkBtn = document.getElementById('benchmarkBtn');
+    const allViewportsBtn = document.getElementById('allViewportsBtn');
     const themeBtn = document.getElementById('themeBtn');
     const themeIcon = document.getElementById('themeIcon');
     const themeLabel = document.getElementById('themeLabel');
     const htmlEl = document.documentElement;
     const sysDark = window.matchMedia('(prefers-color-scheme: dark)');
     const chips = document.querySelectorAll('.chip[data-preset]');
+    const PRESET_ORDER = ['desktop', 'tablet', 'mobile'];
+    const PRESET_LABELS = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile' };
 
     const store = {
       _mem: {},
@@ -404,7 +411,12 @@
     const state = {
       currentTheme: store.get('tempelhtml-theme') || 'system',
       currentPreset: 'desktop',
-      viewportHeight: PRESETS.desktop.height,
+      selectedPresets: ['desktop'],
+      viewportWidths: {
+        desktop: PRESETS.desktop.width,
+        tablet: PRESETS.tablet.width,
+        mobile: PRESETS.mobile.width,
+      },
       selectedFile: null,
     };
 
@@ -427,21 +439,35 @@
 
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
-        chips.forEach((item) => item.classList.remove('active'));
-        chip.classList.add('active');
-        const preset = PRESETS[chip.dataset.preset];
+        const presetName = chip.dataset.preset;
+        const preset = PRESETS[presetName];
         if (!preset) {
           return;
         }
-        state.currentPreset = chip.dataset.preset;
-        state.viewportHeight = preset.height;
-        widthInput.value = preset.width;
+        state.currentPreset = presetName;
+        togglePresetSelection(presetName);
+        renderViewportControls();
         setStatus('');
       });
     });
 
+    allViewportsBtn.addEventListener('click', () => {
+      if (state.selectedPresets.length === PRESET_ORDER.length) {
+        state.selectedPresets = ['desktop'];
+        state.currentPreset = 'desktop';
+      } else {
+        state.selectedPresets = [...PRESET_ORDER];
+        if (!state.selectedPresets.includes(state.currentPreset)) {
+          state.currentPreset = 'desktop';
+        }
+      }
+      renderViewportControls();
+      setStatus('');
+    });
+
     widthInput.addEventListener('input', () => {
-      chips.forEach((chip) => chip.classList.remove('active'));
+      const width = normalizeDimension(widthInput.value, PRESETS[state.currentPreset].width);
+      state.viewportWidths[state.currentPreset] = width;
     });
 
     fileInput.addEventListener('change', async () => {
@@ -490,14 +516,18 @@
         return;
       }
 
-      const width = normalizeDimension(widthInput.value, PRESETS[state.currentPreset].width);
+      state.viewportWidths[state.currentPreset] = normalizeDimension(widthInput.value, PRESETS[state.currentPreset].width);
+      const viewports = getSelectedViewports();
+      if (viewports.length === 0) {
+        setStatus('Select at least one viewport.', 'error');
+        return;
+      }
+
       const payload = {
         html,
         sourceName: state.selectedFile ? state.selectedFile.name : 'inline.html',
-        viewport: {
-          width,
-          height: state.viewportHeight,
-        },
+        viewport: viewports[0],
+        viewports,
       };
 
       buildBtn.disabled = true;
@@ -529,7 +559,8 @@
         progressFill.style.width = '100%';
         const styleCount = msg.styles ? (Number(msg.styles.paint || 0) + Number(msg.styles.text || 0)) : 0;
         const styleText = styleCount > 0 ? ` and ${styleCount} local styles` : '';
-        setStatus(`Done. Created ${msg.nodeCount} nodes${styleText}.`, 'success');
+        const viewportText = msg.variants && msg.variants > 1 ? ` across ${msg.variants} viewports` : '';
+        setStatus(`Done. Created ${msg.nodeCount} nodes${viewportText}${styleText}.`, 'success');
         buildBtn.disabled = false;
       }
 
@@ -540,6 +571,7 @@
     };
 
     applyTheme(state.currentTheme);
+    renderViewportControls();
     fileMeta.textContent = 'No file selected.';
 
     function applyTheme(theme) {
@@ -559,6 +591,49 @@
     function normalizeDimension(value, fallback) {
       const number = Number.parseInt(value, 10);
       return Number.isFinite(number) && number >= 320 ? number : fallback;
+    }
+
+    function togglePresetSelection(presetName) {
+      const selected = state.selectedPresets.includes(presetName);
+      if (selected && state.selectedPresets.length > 1) {
+        state.selectedPresets = state.selectedPresets.filter((item) => item !== presetName);
+        if (!state.selectedPresets.includes(state.currentPreset)) {
+          state.currentPreset = state.selectedPresets[0] || 'desktop';
+        }
+        return;
+      }
+
+      if (!selected) {
+        state.selectedPresets = state.selectedPresets.concat(presetName);
+      }
+    }
+
+    function renderViewportControls() {
+      const selectedSet = new Set(state.selectedPresets);
+      chips.forEach((chip) => {
+        chip.classList.toggle('active', selectedSet.has(chip.dataset.preset));
+      });
+      allViewportsBtn.classList.toggle('active', state.selectedPresets.length === PRESET_ORDER.length);
+
+      if (!PRESETS[state.currentPreset]) {
+        state.currentPreset = state.selectedPresets[0] || 'desktop';
+      }
+      widthInput.value = state.viewportWidths[state.currentPreset] || PRESETS[state.currentPreset].width;
+      widthLabel.textContent = `${PRESET_LABELS[state.currentPreset]} width`;
+      buildBtn.textContent = state.selectedPresets.length > 1
+        ? `Convert & Build (${state.selectedPresets.length})`
+        : 'Convert & Build';
+    }
+
+    function getSelectedViewports() {
+      return PRESET_ORDER
+        .filter((presetName) => state.selectedPresets.includes(presetName))
+        .map((presetName) => ({
+          name: presetName,
+          label: PRESET_LABELS[presetName],
+          width: normalizeDimension(state.viewportWidths[presetName], PRESETS[presetName].width),
+          height: PRESETS[presetName].height,
+        }));
     }
 
     function isHtmlFile(file) {

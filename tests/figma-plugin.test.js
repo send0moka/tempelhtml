@@ -58,18 +58,26 @@ function createFigmaMock() {
   const page = makeNode('PAGE');
   const paintStyles = [];
   const textStyles = [];
+  const uiMessages = [];
+  const notifications = [];
   return {
     page,
     paintStyles,
     textStyles,
+    uiMessages,
+    notifications,
     figma: {
       ui: {
         onmessage: null,
-        postMessage() {},
+        postMessage(message) {
+          uiMessages.push(message);
+        },
       },
       currentPage: page,
       showUI() {},
-      notify() {},
+      notify(message) {
+        notifications.push(message);
+      },
       createFrame() {
         return makeNode('FRAME');
       },
@@ -731,6 +739,87 @@ test('falls back to the html title tag when snapshot metadata is missing', async
   );
 
   expect(snapshot.meta.title).toBe('Studio & Co');
+});
+
+test('converts and builds multiple viewport presets from one plugin action', async () => {
+  const { figma, page, uiMessages, notifications } = createFigmaMock();
+  const requests = [];
+  const jobResults = {};
+  const response = (body, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  });
+  const fetchMock = async (url, options = {}) => {
+    const cleanUrl = String(url);
+    if (cleanUrl.endsWith('/health')) {
+      return response({ ok: true });
+    }
+
+    if (cleanUrl.endsWith('/jobs') && options.method === 'POST') {
+      const body = JSON.parse(options.body);
+      requests.push(body);
+      const jobId = `job-${requests.length}`;
+      jobResults[jobId] = {
+        meta: { title: 'Responsive Build' },
+        figmaTree: [
+          frameSpec('body', {
+            width: body.viewport.width,
+            height: body.viewport.height,
+          }),
+        ],
+      };
+      return response({ jobId }, 202);
+    }
+
+    const match = cleanUrl.match(/\/jobs\/([^/]+)$/);
+    if (match) {
+      return response({
+        state: 'done',
+        progress: 100,
+        message: 'Done',
+        result: jobResults[match[1]],
+      });
+    }
+
+    throw new Error(`Unexpected fetch: ${cleanUrl}`);
+  };
+
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch: fetchMock,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.convertAndBuild({
+    html: '<!doctype html><html><head><title>Responsive Build</title></head><body></body></html>',
+    sourceName: 'inline.html',
+    viewports: [
+      { name: 'desktop', label: 'Desktop', width: 1440, height: 900 },
+      { name: 'mobile', label: 'Mobile', width: 375, height: 812 },
+    ],
+  });
+
+  expect(requests).toHaveLength(2);
+  expect(requests.map((request) => request.viewport)).toEqual([
+    { width: 1440, height: 900 },
+    { width: 375, height: 812 },
+  ]);
+  expect(page.children).toHaveLength(2);
+  expect(page.children[0].name).toBe('Desktop - body');
+  expect(page.children[1].name).toBe('Mobile - body');
+  expect(page.children[1].x).toBe(1480);
+
+  const done = uiMessages.filter((message) => message.type === 'DONE').pop();
+  expect(done.nodeCount).toBe(2);
+  expect(done.variants).toBe(2);
+  expect(notifications.pop()).toBe('tempelhtml: 2 viewports, 2 nodes built');
 });
 
 test('imports inline SVG markup as a rendered Figma node', async () => {

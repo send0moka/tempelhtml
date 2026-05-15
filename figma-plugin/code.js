@@ -9,6 +9,8 @@ const BENCHMARK_URL = 'https://figmaeval.vercel.app';
 
 figma.showUI(__html__, { width: 420, height: 450 });
 
+const DEFAULT_VIEWPORT = { name: 'desktop', label: 'Desktop', width: 1440, height: 900 };
+
 figma.ui.onmessage = async (msg) => {
   try {
     if (msg.type === 'BUILD') {
@@ -32,12 +34,65 @@ figma.ui.onmessage = async (msg) => {
 
 async function convertAndBuild(payload) {
   const serverUrl = payload.serverUrl || DEFAULT_CONVERTER_URL;
+  const viewports = normalizePayloadViewports(payload);
 
   progress('Checking converter...', 1);
   await ensureConverterReady(serverUrl);
 
-  progress('Uploading HTML to converter...', 2);
+  if (viewports.length > 1) {
+    await convertAndBuildViewports(serverUrl, payload, viewports);
+    return;
+  }
 
+  progress('Uploading HTML to converter...', 2);
+  const result = await convertViewport(serverUrl, payload, viewports[0], null);
+  await buildFromSnapshot(withClientSnapshotMeta(result, payload));
+}
+
+async function convertAndBuildViewports(serverUrl, payload, viewports) {
+  let nodeCount = 0;
+  const styleCounts = { paint: 0, text: 0 };
+
+  for (let index = 0; index < viewports.length; index++) {
+    const viewport = viewports[index];
+    const scopedProgress = (text, percent) => {
+      progress(
+        `${viewport.label}: ${text}`,
+        scaleMultiViewportProgress(index, viewports.length, percent)
+      );
+    };
+
+    scopedProgress('Uploading HTML to converter...', 2);
+    const result = await convertViewport(serverUrl, payload, viewport, scopedProgress);
+    const stats = await buildFromSnapshot(
+      withClientSnapshotMeta(result, Object.assign({}, payload, {
+        viewport,
+        viewportLabel: viewport.label,
+      })),
+      {
+        notify: false,
+        postDone: false,
+        progressLabel: viewport.label,
+        onProgress: scopedProgress,
+      }
+    );
+
+    nodeCount += stats.nodeCount;
+    styleCounts.paint += stats.styles.paint;
+    styleCounts.text += stats.styles.text;
+  }
+
+  progress('Done.', 100);
+  figma.ui.postMessage({
+    type: 'DONE',
+    nodeCount,
+    styles: styleCounts,
+    variants: viewports.length,
+  });
+  figma.notify(`tempelhtml: ${viewports.length} viewports, ${nodeCount} nodes built`);
+}
+
+async function convertViewport(serverUrl, payload, viewport, onProgress) {
   const response = await fetch(getJobStartUrl(serverUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -45,7 +100,10 @@ async function convertAndBuild(payload) {
       html: payload.html,
       sourceName: payload.sourceName || 'inline.html',
       baseUrl: payload.baseUrl || null,
-      viewport: payload.viewport || { width: 1440, height: 900 },
+      viewport: {
+        width: viewport.width,
+        height: viewport.height,
+      },
     }),
   });
 
@@ -63,9 +121,61 @@ async function convertAndBuild(payload) {
     throw new Error('Conversion server did not return a job id.');
   }
 
-  progress('Job queued. Rendering page...', 3);
-  const result = await waitForJob(serverUrl, started.jobId);
-  await buildFromSnapshot(withClientSnapshotMeta(result, payload));
+  if (onProgress) {
+    onProgress('Job queued. Rendering page...', 3);
+  } else {
+    progress('Job queued. Rendering page...', 3);
+  }
+  return waitForJob(serverUrl, started.jobId, onProgress);
+}
+
+function normalizePayloadViewports(payload) {
+  const sourcePayload = payload || {};
+  const rawViewports = Array.isArray(sourcePayload.viewports) && sourcePayload.viewports.length > 0
+    ? sourcePayload.viewports
+    : [sourcePayload.viewport || DEFAULT_VIEWPORT];
+
+  const viewports = rawViewports
+    .map((viewport, index) => normalizeViewportSpec(viewport, index))
+    .filter(Boolean);
+
+  return viewports.length > 0 ? viewports : [DEFAULT_VIEWPORT];
+}
+
+function normalizeViewportSpec(viewport, index) {
+  const source = viewport || {};
+  const width = Number.parseInt(source.width !== undefined ? source.width : DEFAULT_VIEWPORT.width, 10);
+  const height = Number.parseInt(source.height !== undefined ? source.height : DEFAULT_VIEWPORT.height, 10);
+  const name = normalizeViewportName(source.name || source.id || source.label || `viewport-${index + 1}`);
+  const label = normalizeViewportLabel(source.label || source.name || source.id || `Viewport ${index + 1}`);
+
+  return {
+    name,
+    label,
+    width: Number.isFinite(width) && width > 0 ? width : DEFAULT_VIEWPORT.width,
+    height: Number.isFinite(height) && height > 0 ? height : DEFAULT_VIEWPORT.height,
+  };
+}
+
+function normalizeViewportName(value) {
+  return String(value || 'viewport')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'viewport';
+}
+
+function normalizeViewportLabel(value) {
+  const label = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!label) {
+    return 'Viewport';
+  }
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function scaleMultiViewportProgress(index, total, percent) {
+  const safeTotal = Math.max(total || 1, 1);
+  const safePercent = Number.isFinite(percent) ? Math.max(Math.min(percent, 100), 0) : 0;
+  return Math.round(((index * 100) + safePercent) / safeTotal);
 }
 
 function openBenchmark() {
@@ -92,30 +202,34 @@ async function ensureConverterReady(serverUrl) {
   }
 }
 
-async function buildFromSnapshot(data) {
+async function buildFromSnapshot(data, options = {}) {
   const figmaTree = data.figmaTree || [];
   const warnings = data.warnings || [];
   const styleNamespace = resolveStyleNamespace(data);
+  const viewportLabel = options.viewportLabel || (data.meta && data.meta.viewportLabel) || '';
 
   for (const warning of warnings) {
-    progress(`Warning: ${warning}`);
+    reportProgress(options, `Warning: ${warning}`);
   }
 
   await ensureCurrentPageLoaded();
 
-  progress('Pre-loading fonts...', 91);
+  reportProgress(options, 'Pre-loading fonts...', 91);
   await preloadFonts(figmaTree);
 
-  progress('Creating local styles...', 94);
+  reportProgress(options, 'Creating local styles...', 94);
   const styleRegistry = await createLocalStylesFromTree(figmaTree, styleNamespace);
 
-  progress('Building nodes...', 96);
+  reportProgress(options, 'Building nodes...', 96);
   let nodeCount = 0;
   const page = figma.currentPage;
 
   for (const nodeSpec of figmaTree) {
     const node = await buildNode(nodeSpec, 'NONE', styleRegistry);
     if (node) {
+      if (viewportLabel) {
+        node.name = `${viewportLabel} - ${node.name}`;
+      }
       page.appendChild(node);
       nodeCount++;
     }
@@ -123,9 +237,16 @@ async function buildFromSnapshot(data) {
 
   layoutTopLevelNodes(page);
 
-  progress('Done.', 100);
-  figma.ui.postMessage({ type: 'DONE', nodeCount: nodeCount, styles: styleRegistry.counts });
-  figma.notify(`tempelhtml: ${nodeCount} nodes, ${styleRegistry.counts.paint + styleRegistry.counts.text} styles synced`);
+  reportProgress(options, 'Done.', 100);
+
+  const stats = { nodeCount: nodeCount, styles: styleRegistry.counts };
+  if (options.postDone !== false) {
+    figma.ui.postMessage({ type: 'DONE', nodeCount: nodeCount, styles: styleRegistry.counts });
+  }
+  if (options.notify !== false) {
+    figma.notify(`tempelhtml: ${nodeCount} nodes, ${styleRegistry.counts.paint + styleRegistry.counts.text} styles synced`);
+  }
+  return stats;
 }
 
 async function ensureCurrentPageLoaded() {
@@ -142,6 +263,14 @@ function progress(text, percent) {
   figma.ui.postMessage({ type: 'PROGRESS', text: text, percent: percent });
 }
 
+function reportProgress(options, text, percent) {
+  if (options && typeof options.onProgress === 'function') {
+    options.onProgress(text, percent);
+    return;
+  }
+  progress(options && options.progressLabel ? `${options.progressLabel}: ${text}` : text, percent);
+}
+
 function withClientSnapshotMeta(snapshot, payload) {
   const result = snapshot || {};
   const meta = Object.assign({}, result.meta || {});
@@ -149,6 +278,16 @@ function withClientSnapshotMeta(snapshot, payload) {
 
   if (title) {
     meta.title = title;
+  }
+
+  if (payload && payload.viewportLabel) {
+    meta.viewportLabel = payload.viewportLabel;
+  }
+  if (payload && payload.viewport) {
+    meta.viewport = {
+      width: payload.viewport.width,
+      height: payload.viewport.height,
+    };
   }
 
   return Object.assign({}, result, { meta });
@@ -2444,7 +2583,7 @@ function normalizeWhitespaceForSearch(value) {
   return { text: result, map };
 }
 
-async function waitForJob(serverUrl, jobId) {
+async function waitForJob(serverUrl, jobId, onProgress) {
   const statusUrl = getJobStatusUrl(serverUrl, jobId);
   let lastMessage = '';
   let lastPercent = -1;
@@ -2460,7 +2599,11 @@ async function waitForJob(serverUrl, jobId) {
     const message = status.message || 'Converting HTML...';
 
     if (message !== lastMessage || percent !== lastPercent) {
-      progress(message, percent);
+      if (onProgress) {
+        onProgress(message, percent);
+      } else {
+        progress(message, percent);
+      }
       lastMessage = message;
       lastPercent = percent;
     }
