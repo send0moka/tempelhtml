@@ -44,25 +44,31 @@ export async function convertHtmlString(html, options = {}) {
 
 async function convertWithExtractor({ extractor, source, viewport, baseUrl = null, onProgress = null }) {
   progress(onProgress, 5, 'Extracting page...');
-  const { domTree } = await extractor();
+  const { domTree, title } = await extractor();
 
   progress(onProgress, 78, 'Resolving fonts...');
   const fontMap = await resolveFonts(domTree);
   progress(onProgress, 86, 'Building Figma tree...');
   const sorted = sortByZIndex(domTree);
   const figmaTree = buildFigmaTree(sorted, { fontMap });
+  const documentTitle = normalizeDocumentTitle(title);
   progress(onProgress, 90, 'Snapshot ready. Sending to Figma...');
 
   return {
     version: '0.1.0',
     meta: {
       source,
+      ...(documentTitle ? { title: documentTitle } : {}),
       viewport,
       ...(baseUrl ? { baseUrl } : {}),
     },
     warnings: [],
     figmaTree,
   };
+}
+
+function normalizeDocumentTitle(title) {
+  return String(title || '').replace(/\s+/g, ' ').trim();
 }
 
 function progress(onProgress, percent, message) {

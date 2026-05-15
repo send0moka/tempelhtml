@@ -64,7 +64,7 @@ async function convertAndBuild(payload) {
 
   progress('Job queued. Rendering page...', 3);
   const result = await waitForJob(serverUrl, started.jobId);
-  await buildFromSnapshot(result);
+  await buildFromSnapshot(withClientSnapshotMeta(result, payload));
 }
 
 function openBenchmark() {
@@ -94,6 +94,7 @@ async function ensureConverterReady(serverUrl) {
 async function buildFromSnapshot(data) {
   const figmaTree = data.figmaTree || [];
   const warnings = data.warnings || [];
+  const styleNamespace = resolveStyleNamespace(data);
 
   for (const warning of warnings) {
     progress(`Warning: ${warning}`);
@@ -105,7 +106,7 @@ async function buildFromSnapshot(data) {
   await preloadFonts(figmaTree);
 
   progress('Creating local styles...', 94);
-  const styleRegistry = await createLocalStylesFromTree(figmaTree);
+  const styleRegistry = await createLocalStylesFromTree(figmaTree, styleNamespace);
 
   progress('Building nodes...', 96);
   let nodeCount = 0;
@@ -138,6 +139,61 @@ async function ensureCurrentPageLoaded() {
 
 function progress(text, percent) {
   figma.ui.postMessage({ type: 'PROGRESS', text: text, percent: percent });
+}
+
+function withClientSnapshotMeta(snapshot, payload) {
+  const result = snapshot || {};
+  const meta = Object.assign({}, result.meta || {});
+  const title = normalizeDocumentTitle(meta.title) || extractTitleFromHtml(payload && payload.html);
+
+  if (title) {
+    meta.title = title;
+  }
+
+  return Object.assign({}, result, { meta });
+}
+
+function resolveStyleNamespace(snapshot) {
+  const meta = snapshot && snapshot.meta ? snapshot.meta : {};
+  const title = normalizeDocumentTitle(meta.title || meta.documentTitle || meta.pageTitle);
+  if (!title) {
+    return DEFAULT_STYLE_NAMESPACE;
+  }
+  return sanitizeStyleSegment(title);
+}
+
+function extractTitleFromHtml(html) {
+  const match = String(html || '').match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  if (!match) {
+    return '';
+  }
+  return normalizeDocumentTitle(decodeHtmlEntities(match[1].replace(/<[^>]*>/g, ' ')));
+}
+
+function normalizeDocumentTitle(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&#(\d+);/g, (match, code) => {
+      const number = Number.parseInt(code, 10);
+      return isValidCodePoint(number) ? String.fromCodePoint(number) : match;
+    })
+    .replace(/&#x([a-fA-F\d]+);/g, (match, code) => {
+      const number = Number.parseInt(code, 16);
+      return isValidCodePoint(number) ? String.fromCodePoint(number) : match;
+    })
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+function isValidCodePoint(number) {
+  return Number.isFinite(number) && number >= 0 && number <= 0x10ffff;
 }
 
 // Font pre-loading
@@ -355,17 +411,17 @@ function normalizeFontName(font) {
 
 // Local style creation
 
-const STYLE_NAMESPACE = 'TempelHTML';
+const DEFAULT_STYLE_NAMESPACE = 'TempelHTML';
 
-async function createLocalStylesFromTree(nodes) {
-  const catalog = buildLocalStyleCatalog(nodes || []);
+async function createLocalStylesFromTree(nodes, styleNamespace = DEFAULT_STYLE_NAMESPACE) {
+  const catalog = buildLocalStyleCatalog(nodes || [], styleNamespace);
   const paintByKey = {};
   const textByKey = {};
 
   const localPaintStyles = await getLocalStylesSafe('paint');
   const localTextStyles = await getLocalStylesSafe('text');
-  pruneGeneratedStyles(localPaintStyles, catalog.paintStyles);
-  pruneGeneratedStyles(localTextStyles, catalog.textStyles);
+  pruneGeneratedStyles(localPaintStyles, catalog.paintStyles, styleNamespace);
+  pruneGeneratedStyles(localTextStyles, catalog.textStyles, styleNamespace);
 
   if (typeof figma.createPaintStyle === 'function') {
     for (const def of catalog.paintStyles) {
@@ -395,7 +451,7 @@ async function createLocalStylesFromTree(nodes) {
   };
 }
 
-function buildLocalStyleCatalog(nodes) {
+function buildLocalStyleCatalog(nodes, styleNamespace = DEFAULT_STYLE_NAMESPACE) {
   const paintMap = {};
   const textMap = {};
 
@@ -437,8 +493,8 @@ function buildLocalStyleCatalog(nodes) {
   const reusablePaintStyles = paintStyles.filter(isReusableLocalStyleDefinition);
   const reusableTextStyles = textStyles.filter(isReusableLocalStyleDefinition);
 
-  assignPaintStyleNames(reusablePaintStyles);
-  assignTextStyleNames(reusableTextStyles);
+  assignPaintStyleNames(reusablePaintStyles, styleNamespace);
+  assignTextStyleNames(reusableTextStyles, styleNamespace);
 
   return { paintStyles: reusablePaintStyles, textStyles: reusableTextStyles };
 }
@@ -498,7 +554,7 @@ function isReusableLocalStyleDefinition(def) {
   return Boolean(def && def.count > 1);
 }
 
-function pruneGeneratedStyles(localStyles, defs) {
+function pruneGeneratedStyles(localStyles, defs, styleNamespace = DEFAULT_STYLE_NAMESPACE) {
   if (!Array.isArray(localStyles) || localStyles.length === 0) {
     return;
   }
@@ -517,7 +573,7 @@ function pruneGeneratedStyles(localStyles, defs) {
       continue;
     }
 
-    if (!style.name.startsWith(`${STYLE_NAMESPACE} / `)) {
+    if (!style.name.startsWith(`${styleNamespace} / `)) {
       continue;
     }
 
@@ -669,7 +725,7 @@ function normalizeLetterSpacingKey(letterSpacing) {
   return `${letterSpacing.unit}:${roundStyleNumber(letterSpacing.value || 0, 2)}`;
 }
 
-function assignPaintStyleNames(defs) {
+function assignPaintStyleNames(defs, styleNamespace = DEFAULT_STYLE_NAMESPACE) {
   defs.sort((a, b) => {
     const aName = buildPaintStyleBaseName(a);
     const bName = buildPaintStyleBaseName(b);
@@ -681,13 +737,13 @@ function assignPaintStyleNames(defs) {
   const used = {};
   for (let index = 0; index < defs.length; index++) {
     const def = defs[index];
-    const baseName = `${STYLE_NAMESPACE} / ${buildPaintStyleBaseName(def)}`;
+    const baseName = `${styleNamespace} / ${buildPaintStyleBaseName(def)}`;
     def.name = makeUniqueStyleName(baseName, getPaintStyleSuffix(def), used);
     def.description = buildPaintStyleDescription(def);
   }
 }
 
-function assignTextStyleNames(defs) {
+function assignTextStyleNames(defs, styleNamespace = DEFAULT_STYLE_NAMESPACE) {
   defs.sort((a, b) => {
     const aScale = getTypographyScale(a);
     const bScale = getTypographyScale(b);
@@ -700,7 +756,7 @@ function assignTextStyleNames(defs) {
   for (let index = 0; index < defs.length; index++) {
     const def = defs[index];
     const scale = getTypographyScale(def);
-    const baseName = `${STYLE_NAMESPACE} / Typography / ${scale.role} / ${scale.size} / ${getFontStyleLabel(def.fontName.style)}`;
+    const baseName = `${styleNamespace} / Typography / ${scale.role} / ${scale.size} / ${getFontStyleLabel(def.fontName.style)}`;
     def.name = makeUniqueStyleName(baseName, getTextStyleSuffix(def), used);
     def.description = buildTextStyleDescription(def);
   }

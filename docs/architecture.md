@@ -18,6 +18,7 @@ tempelhtml renders HTML in Playwright, extracts computed styles, maps the result
   "version": "0.1.0",
   "meta": {
     "source": "./examples/vela.html",
+    "title": "VELA — Creative Studio",
     "viewport": { "width": 1440, "height": 900 }
   },
   "warnings": [],

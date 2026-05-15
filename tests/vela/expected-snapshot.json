@@ -2,6 +2,7 @@
   "version": "0.1.0",
   "meta": {
     "source": "./tests/vela/input.html",
+    "title": "VELA — Creative Studio",
     "viewport": {
       "width": 1440,
       "height": 900

@@ -532,6 +532,117 @@ test('creates local styles only for reusable values and prunes stale generated s
   expect(generatedTextStyles[0].fontSize).toBe(16);
 });
 
+test('uses document title as local style namespace without pruning other imports', async () => {
+  const { figma, paintStyles, textStyles } = createFigmaMock();
+  paintStyles.push(
+    {
+      id: 'previous-paint',
+      name: 'First Landing / Color / Green / 500',
+      paints: [],
+      remove() {
+        this.removed = true;
+      },
+    },
+    {
+      id: 'stale-current-paint',
+      name: 'Second Landing / Color / Purple / 900 / OLD',
+      paints: [],
+      remove() {
+        this.removed = true;
+      },
+    }
+  );
+  textStyles.push(
+    {
+      id: 'previous-text',
+      name: 'First Landing / Typography / Body / MD / Regular',
+      remove() {
+        this.removed = true;
+      },
+    },
+    {
+      id: 'stale-current-text',
+      name: 'Second Landing / Typography / Body / XS / Regular / OLD',
+      remove() {
+        this.removed = true;
+      },
+    }
+  );
+
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  const sharedFill = [{
+    type: 'SOLID',
+    color: { r: 0.1, g: 0.36, b: 0.3 },
+    opacity: 1,
+  }];
+
+  await context.buildFromSnapshot({
+    meta: {
+      title: 'Second/Landing',
+    },
+    figmaTree: [
+      textSpec('p.first', {
+        characters: 'Shared copy one',
+        fontSize: 18,
+        fills: sharedFill,
+      }),
+      textSpec('p.second', {
+        characters: 'Shared copy two',
+        fontSize: 18,
+        fills: sharedFill,
+      }),
+    ],
+  });
+
+  const activePaintNames = paintStyles.filter((style) => !style.removed).map((style) => style.name);
+  const activeTextNames = textStyles.filter((style) => !style.removed).map((style) => style.name);
+
+  expect(paintStyles.find((style) => style.id === 'previous-paint').removed).toBeUndefined();
+  expect(textStyles.find((style) => style.id === 'previous-text').removed).toBeUndefined();
+  expect(paintStyles.find((style) => style.id === 'stale-current-paint').removed).toBe(true);
+  expect(textStyles.find((style) => style.id === 'stale-current-text').removed).toBe(true);
+
+  expect(activePaintNames.some((name) => name.startsWith('Second Landing / Color / '))).toBe(true);
+  expect(activeTextNames.some((name) => name.startsWith('Second Landing / Typography / Body / LG / Regular'))).toBe(true);
+  expect(activePaintNames.some((name) => name.startsWith('TempelHTML / '))).toBe(false);
+  expect(activeTextNames.some((name) => name.startsWith('TempelHTML / '))).toBe(false);
+});
+
+test('falls back to the html title tag when snapshot metadata is missing', async () => {
+  const { figma } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  const snapshot = context.withClientSnapshotMeta(
+    { figmaTree: [], meta: {} },
+    {
+      html: '<!doctype html><html><head><title>Studio &amp; Co</title></head><body></body></html>',
+    }
+  );
+
+  expect(snapshot.meta.title).toBe('Studio & Co');
+});
+
 test('imports inline SVG markup as a rendered Figma node', async () => {
   const { figma, page } = createFigmaMock();
   const context = {

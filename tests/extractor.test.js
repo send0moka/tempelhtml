@@ -9,6 +9,22 @@ function find(node, predicate) {
   return null;
 }
 
+test('captures document title from the rendered HTML', async () => {
+  const { title, domTree } = await extractFromHtml(`
+    <!doctype html>
+    <html>
+      <head><title>Acme Dashboard</title></head>
+      <body><main>Ready</main></body>
+    </html>
+  `, {
+    width: 320,
+    height: 120,
+  });
+
+  expect(title).toBe('Acme Dashboard');
+  expect(domTree).toBeTruthy();
+}, 30000);
+
 test('preserves structured interactive children instead of collapsing them into text', async () => {
   const { domTree } = await extractFromFile('./tests/vela/input.html', {
     width: 1440,

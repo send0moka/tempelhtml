@@ -12,7 +12,7 @@ import { pathToFileURL } from 'url';
 /**
  * @param {string} filePath - absolute or relative path to HTML file
  * @param {{ width: number, height: number }} viewport
- * @returns {{ domTree }}
+ * @returns {{ domTree, title: string }}
  */
 export async function extractFromFile(filePath, { width = 1440, height = 900 } = {}) {
   const absPath = resolve(filePath);
@@ -28,7 +28,7 @@ export async function extractFromFile(filePath, { width = 1440, height = 900 } =
 /**
  * @param {string} html
  * @param {{ width?: number, height?: number, baseUrl?: string | null }} options
- * @returns {{ domTree }}
+ * @returns {{ domTree, title: string }}
  */
 export async function extractFromHtml(html, { width = 1440, height = 900, baseUrl = null } = {}) {
   const browser = await chromium.launch();
@@ -45,8 +45,9 @@ async function extractFromPage(page) {
   await stabilizePage(page);
 
   // Walk the full DOM and capture computed styles + rects
+  const title = await page.title();
   const domTree = await page.evaluate(walkDOMInBrowser);
-  return { domTree };
+  return { domTree, title };
 }
 
 async function stabilizePage(page) {
