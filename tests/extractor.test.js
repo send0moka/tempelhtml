@@ -178,6 +178,24 @@ test('captures inline svg markup for native import', async () => {
   expect(svg.svgMarkup).toContain('<circle');
 }, 30000);
 
+test('captures base64 image sources from img elements', async () => {
+  const { domTree } = await extractFromHtml(`
+    <img class="logo" alt="Logo" src="data:image/png;base64,aGVsbG8=" style="width: 48px; height: 32px; object-fit: cover;" />
+  `, {
+    width: 120,
+    height: 80,
+  });
+
+  const image = find(domTree, (node) => node.tag === 'img');
+  expect(image).toBeTruthy();
+  expect(image.children).toHaveLength(0);
+  expect(image.imageData).toEqual(expect.objectContaining({
+    src: 'data:image/png;base64,aGVsbG8=',
+    alt: 'Logo',
+  }));
+  expect(image.computed.objectFit).toBe('cover');
+}, 30000);
+
 test('captures one-sided borders as visual boxes', async () => {
   const { domTree } = await extractFromHtml(`
     <style>

@@ -84,6 +84,11 @@ function createFigmaMock() {
         node.svgMarkup = svg;
         return node;
       },
+      createImage(bytes) {
+        return {
+          hash: `image-${bytes.length}`,
+        };
+      },
       async listAvailableFontsAsync() {
         return AVAILABLE_FONT_NAMES.map((fontName) => ({ fontName }));
       },
@@ -446,6 +451,91 @@ test('keeps single-child centered flex containers fixed when rendered free space
   expect(divider.width).toBe(60);
 });
 
+test('honors explicit auto-layout sizing modes from the snapshot', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      frameSpec('div.margin-flex', {
+        width: 320,
+        height: 180,
+        layoutMode: 'VERTICAL',
+        primaryAxisAlignItems: 'MIN',
+        counterAxisAlignItems: 'MIN',
+        primaryAxisSizingMode: 'FIXED',
+        counterAxisSizingMode: 'FIXED',
+        children: [
+          frameSpec('div.first', {
+            y: 24,
+            width: 120,
+            height: 30,
+            layoutPositioning: 'ABSOLUTE',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const frame = page.children[0];
+  expect(frame.primaryAxisSizingMode).toBe('FIXED');
+  expect(frame.counterAxisSizingMode).toBe('FIXED');
+  expect(frame.layoutSizingVertical).toBe('FIXED');
+  expect(frame.layoutSizingHorizontal).toBe('FIXED');
+  expect(frame.children[0].layoutPositioning).toBe('ABSOLUTE');
+});
+
+test('applies child fill sizing from the snapshot', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      frameSpec('div.card', {
+        width: 600,
+        height: 240,
+        layoutMode: 'VERTICAL',
+        children: [
+          frameSpec('div.card-header', {
+            width: 552,
+            height: 23,
+            layoutMode: 'HORIZONTAL',
+            layoutSizingHorizontal: 'FILL',
+            primaryAxisAlignItems: 'SPACE_BETWEEN',
+            primaryAxisSizingMode: 'FIXED',
+            counterAxisSizingMode: 'FIXED',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const card = page.children[0];
+  const header = card.children[0];
+  expect(header.layoutSizingHorizontal).toBe('FILL');
+  expect(header.primaryAxisSizingMode).toBe('FIXED');
+});
+
 test('creates local styles only for reusable values and prunes stale generated styles', async () => {
   const { figma, paintStyles, textStyles } = createFigmaMock();
   paintStyles.push(
@@ -680,6 +770,52 @@ test('imports inline SVG markup as a rendered Figma node', async () => {
   expect(svg.width).toBe(366);
   expect(svg.height).toBe(403);
   expect(svg.opacity).toBe(0.15);
+});
+
+test('imports base64 image data as a Figma image fill', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+    Uint8Array,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      {
+        name: 'img.logo',
+        type: 'IMAGE',
+        x: 10,
+        y: 12,
+        width: 48,
+        height: 32,
+        _objectFit: 'cover',
+        _image: {
+          src: 'data:image/png;base64,aGVsbG8=',
+          alt: 'Logo',
+        },
+      },
+    ],
+  });
+
+  const image = page.children[0];
+  expect(image.name).toBe('img.logo');
+  expect(image.x).toBe(10);
+  expect(image.y).toBe(12);
+  expect(image.width).toBe(48);
+  expect(image.height).toBe(32);
+  expect(image.fills).toEqual([{
+    type: 'IMAGE',
+    imageHash: 'image-5',
+    scaleMode: 'FILL',
+  }]);
 });
 
 test('applies side-specific border weights for underline-like borders', async () => {

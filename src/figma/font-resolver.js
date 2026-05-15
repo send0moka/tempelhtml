@@ -83,11 +83,14 @@ function resolveFont(cssFamily, weightStr, isItalic) {
   const styleName = WEIGHT_MAP[weight] ?? 'Regular';
   const italicSuffix = isItalic ? ' Italic' : '';
   const targetStyle = styleName === 'Regular' && isItalic ? 'Italic' : `${styleName}${italicSuffix}`;
+  const requestedNamedFamily = getRequestedNamedFamily(stack);
 
   const candidates = [];
   const availableStackFamily = stack.find((name) => FIGMA_FONT_STYLES[name]);
   if (availableStackFamily) {
     candidates.push(availableStackFamily);
+  } else if (requestedNamedFamily) {
+    candidates.push(requestedNamedFamily);
   } else {
     const generic = getGenericFontFamily(stack);
     if (generic === 'serif') {
@@ -109,7 +112,9 @@ function resolveFont(cssFamily, weightStr, isItalic) {
 
   for (const candidate of candidates) {
     const styles = FIGMA_FONT_STYLES[candidate];
-    if (!styles) continue;
+    if (!styles) {
+      return { family: candidate, style: targetStyle };
+    }
     if (styles.includes(targetStyle)) {
       return { family: candidate, style: targetStyle };
     }
@@ -139,6 +144,28 @@ function getGenericFontFamily(stack) {
   }
 
   return null;
+}
+
+function getRequestedNamedFamily(stack) {
+  if (!Array.isArray(stack)) {
+    return null;
+  }
+
+  return stack.find((name) => !isGenericFontFamily(name)) || null;
+}
+
+function isGenericFontFamily(name) {
+  const normalized = String(name || '').toLowerCase();
+  return normalized === 'serif'
+    || normalized === 'sans-serif'
+    || normalized === 'monospace'
+    || normalized === 'cursive'
+    || normalized === 'fantasy'
+    || normalized === 'system-ui'
+    || normalized === 'ui-serif'
+    || normalized === 'ui-sans-serif'
+    || normalized === 'ui-monospace'
+    || normalized === 'ui-rounded';
 }
 
 /**

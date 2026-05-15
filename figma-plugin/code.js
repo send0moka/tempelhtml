@@ -3,7 +3,8 @@
  * Figma Plugin main thread - receives HTML or JSON and creates Figma nodes.
  */
 
-const DEFAULT_CONVERTER_URL = 'https://jehian-tempelhtml.hf.space';
+const DEFAULT_CONVERTER_URL = 'http://localhost:3210';
+// const DEFAULT_CONVERTER_URL = 'https://jehian-tempelhtml.hf.space';
 const BENCHMARK_URL = 'https://figmaeval.vercel.app';
 
 figma.showUI(__html__, { width: 420, height: 450 });
@@ -1300,6 +1301,9 @@ function cloneValue(value) {
 // Node builder
 
 async function buildNode(spec, parentLayoutMode, styleRegistry) {
+  if (spec.type === 'IMAGE' || spec._image) {
+    return await buildImageNode(spec, parentLayoutMode, styleRegistry);
+  }
   if (spec.type === 'SVG' || spec._svgMarkup) {
     return await buildSvgNode(spec, parentLayoutMode, styleRegistry);
   }
@@ -1307,6 +1311,164 @@ async function buildNode(spec, parentLayoutMode, styleRegistry) {
     return await buildTextNode(spec, parentLayoutMode, styleRegistry);
   }
   return buildFrameNode(spec, parentLayoutMode, styleRegistry);
+}
+
+async function buildImageNode(spec, parentLayoutMode, styleRegistry) {
+  const frame = figma.createFrame();
+  frame.name = spec.name;
+  frame.x = spec.x || 0;
+  frame.y = spec.y || 0;
+  frame.resize(Math.max(spec.width || 1, 1), Math.max(spec.height || 1, 1));
+  frame.fills = [];
+  frame.strokes = [];
+
+  const imagePaint = createImageFillPaint(spec);
+  if (imagePaint) {
+    frame.fills = [imagePaint];
+  } else if (spec.fills && spec.fills.length > 0) {
+    frame.fills = spec.fills;
+  }
+
+  if (spec.opacity !== undefined) frame.opacity = spec.opacity;
+  if (spec.layoutPositioning) {
+    try {
+      frame.layoutPositioning = spec.layoutPositioning;
+    } catch (err) {}
+  }
+  applyChildLayoutSizing(frame, spec);
+  if (spec.clipsContent !== undefined) frame.clipsContent = spec.clipsContent;
+  if (spec.cornerRadius !== undefined) frame.cornerRadius = spec.cornerRadius;
+  if (spec.topLeftRadius !== undefined) {
+    frame.topLeftRadius = spec.topLeftRadius;
+    frame.topRightRadius = spec.topRightRadius || 0;
+    frame.bottomRightRadius = spec.bottomRightRadius || 0;
+    frame.bottomLeftRadius = spec.bottomLeftRadius || 0;
+  }
+  if (spec.strokes && spec.strokes.length > 0) {
+    frame.strokes = spec.strokes;
+    frame.strokeWeight = spec.strokeWeight || 1;
+    frame.strokeAlign = spec.strokeAlign || 'INSIDE';
+    if (spec.strokeTopWeight !== undefined) frame.strokeTopWeight = spec.strokeTopWeight;
+    if (spec.strokeRightWeight !== undefined) frame.strokeRightWeight = spec.strokeRightWeight;
+    if (spec.strokeBottomWeight !== undefined) frame.strokeBottomWeight = spec.strokeBottomWeight;
+    if (spec.strokeLeftWeight !== undefined) frame.strokeLeftWeight = spec.strokeLeftWeight;
+  }
+  if (spec.effects && spec.effects.length > 0) {
+    applyFrameEffects(frame, spec.effects);
+  }
+  if (spec.blendMode) {
+    try {
+      frame.blendMode = spec.blendMode;
+    } catch (err) {}
+  }
+
+  return frame;
+}
+
+function createImageFillPaint(spec) {
+  if (!figma.createImage || !spec || !spec._image || !spec._image.src) {
+    return null;
+  }
+
+  try {
+    const bytes = decodeImageBytes(spec._image.src);
+    if (!bytes || bytes.length === 0) {
+      return null;
+    }
+
+    const image = figma.createImage(bytes);
+    return {
+      type: 'IMAGE',
+      imageHash: image.hash,
+      scaleMode: mapObjectFitToImageScaleMode(spec._objectFit),
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+function decodeImageBytes(src) {
+  const source = String(src || '').trim();
+  const dataUri = source.match(/^data:([^;,]+)?((?:;[^,]*)?),(.*)$/i);
+  if (!dataUri) {
+    return null;
+  }
+
+  const meta = dataUri[2] || '';
+  const payload = dataUri[3] || '';
+  if (meta.toLowerCase().includes(';base64')) {
+    return decodeBase64Bytes(payload);
+  }
+
+  return encodeUtf8Bytes(decodeURIComponent(payload));
+}
+
+function decodeBase64Bytes(value) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const clean = String(value || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .replace(/\s+/g, '')
+    .replace(/=+$/g, '');
+  const bytes = [];
+  let buffer = 0;
+  let bitCount = 0;
+
+  for (let index = 0; index < clean.length; index++) {
+    const char = clean[index];
+    const next = alphabet.indexOf(char);
+    if (next < 0) {
+      continue;
+    }
+
+    buffer = (buffer << 6) | next;
+    bitCount += 6;
+    if (bitCount >= 8) {
+      bitCount -= 8;
+      bytes.push((buffer >> bitCount) & 0xff);
+    }
+  }
+
+  return new Uint8Array(bytes);
+}
+
+function encodeUtf8Bytes(value) {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(String(value || ''));
+  }
+
+  const bytes = [];
+  const text = String(value || '');
+  for (const char of text) {
+    const codePoint = char.codePointAt(0);
+    if (codePoint <= 0x7f) {
+      bytes.push(codePoint);
+    } else if (codePoint <= 0x7ff) {
+      bytes.push(0xc0 | (codePoint >> 6));
+      bytes.push(0x80 | (codePoint & 0x3f));
+    } else if (codePoint <= 0xffff) {
+      bytes.push(0xe0 | (codePoint >> 12));
+      bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+      bytes.push(0x80 | (codePoint & 0x3f));
+    } else {
+      bytes.push(0xf0 | (codePoint >> 18));
+      bytes.push(0x80 | ((codePoint >> 12) & 0x3f));
+      bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+      bytes.push(0x80 | (codePoint & 0x3f));
+    }
+  }
+  return new Uint8Array(bytes);
+}
+
+function mapObjectFitToImageScaleMode(objectFit) {
+  const fit = String(objectFit || '').toLowerCase();
+  if (fit === 'contain' || fit === 'scale-down' || fit === 'none') {
+    return 'FIT';
+  }
+  if (fit === 'fill') {
+    return 'STRETCH';
+  }
+  return 'FILL';
 }
 
 async function buildSvgNode(spec, parentLayoutMode, styleRegistry) {
@@ -1324,6 +1486,12 @@ async function buildSvgNode(spec, parentLayoutMode, styleRegistry) {
     if (spec.opacity !== undefined) {
       node.opacity = spec.opacity;
     }
+    if (spec.layoutPositioning) {
+      try {
+        node.layoutPositioning = spec.layoutPositioning;
+      } catch (err) {}
+    }
+    applyChildLayoutSizing(node, spec);
     if (spec.blendMode) {
       try {
         node.blendMode = spec.blendMode;
@@ -1351,6 +1519,23 @@ function resizeSceneNode(node, width, height) {
   }
 }
 
+function applyChildLayoutSizing(node, spec) {
+  if (!node || !spec) {
+    return;
+  }
+
+  if (spec.layoutSizingHorizontal) {
+    try {
+      node.layoutSizingHorizontal = spec.layoutSizingHorizontal;
+    } catch (err) {}
+  }
+  if (spec.layoutSizingVertical) {
+    try {
+      node.layoutSizingVertical = spec.layoutSizingVertical;
+    } catch (err) {}
+  }
+}
+
 async function buildTextNode(spec, parentLayoutMode, styleRegistry) {
   const textRuns = getAlignedTextRuns(spec);
 
@@ -1363,6 +1548,7 @@ async function buildTextNode(spec, parentLayoutMode, styleRegistry) {
   applyTextRunStyles(text, textRuns);
   await applyTextStyleIds(text, spec, textRuns, styleRegistry);
   applyTextSizing(text, spec, parentLayoutMode);
+  applyChildLayoutSizing(text, spec);
   return text;
 }
 
@@ -1376,6 +1562,7 @@ async function buildMixedTextGroup(spec, styleRegistry) {
   frame.fills = [];
   frame.strokes = [];
   frame.clipsContent = false;
+  applyChildLayoutSizing(frame, spec);
 
   const baseText = figma.createText();
   applyBaseTextProps(baseText, Object.assign({}, spec, { x: 0, y: 0 }));
@@ -1631,6 +1818,7 @@ async function buildFrameNode(spec, parentLayoutMode, styleRegistry) {
   else frame.fills = [];
 
   if (spec.opacity !== undefined) frame.opacity = spec.opacity;
+  applyChildLayoutSizing(frame, spec);
 
   if (spec.paddingTop !== undefined) frame.paddingTop = spec.paddingTop;
   if (spec.paddingRight !== undefined) frame.paddingRight = spec.paddingRight;
@@ -1882,8 +2070,8 @@ function applySmartAutoLayoutSizing(frame, spec, strategy) {
     children: Array.isArray(sourceSpec.children) ? sourceSpec.children : [],
   });
 
-  const primaryMode = sourceStrategy.primaryAxisSizingMode || (sizing.primaryFixed ? 'FIXED' : null);
-  const counterMode = sourceStrategy.counterAxisSizingMode || (sizing.counterFixed ? 'FIXED' : null);
+  const primaryMode = sourceStrategy.primaryAxisSizingMode || sourceSpec.primaryAxisSizingMode || (sizing.primaryFixed ? 'FIXED' : null);
+  const counterMode = sourceStrategy.counterAxisSizingMode || sourceSpec.counterAxisSizingMode || (sizing.counterFixed ? 'FIXED' : null);
 
   if (primaryMode) {
     try {

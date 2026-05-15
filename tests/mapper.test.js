@@ -9,6 +9,9 @@ function baseComputed(overrides = {}) {
     justifyContent: 'flex-start',
     alignItems: 'stretch',
     flexWrap: 'nowrap',
+    flexGrow: '0',
+    flexShrink: '1',
+    flexBasis: 'auto',
     gap: '0px',
     columnGap: '0px',
     rowGap: '0px',
@@ -33,6 +36,8 @@ function baseComputed(overrides = {}) {
     backgroundImage: 'none',
     backgroundSize: 'auto',
     backgroundPosition: '0% 0%',
+    objectFit: 'fill',
+    objectPosition: '50% 50%',
     color: 'rgb(0, 0, 0)',
     opacity: '1',
     borderRadius: '0px',
@@ -84,7 +89,7 @@ function baseComputed(overrides = {}) {
   };
 }
 
-function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0, svgMarkup = null, formControl = null }) {
+function frameNode({ tag = 'div', classList = [], rect, computed = {}, children = [], pseudo = { before: null, after: null }, effectiveZ = 0, svgMarkup = null, formControl = null, imageData = null }) {
   return {
     tag,
     id: null,
@@ -96,6 +101,7 @@ function frameNode({ tag = 'div', classList = [], rect, computed = {}, children 
     computed: baseComputed(computed),
     ...(formControl ? { formControl } : {}),
     ...(svgMarkup ? { svgMarkup } : {}),
+    ...(imageData ? { imageData } : {}),
     pseudo,
     children,
     effectiveZ,
@@ -139,13 +145,14 @@ test('groups top-level fixed bars into a header frame', () => {
   const [tree] = buildFigmaTree({ annotated: body });
 
   expect(tree._pageLayout).toBe(true);
-  expect(tree.children[0].name).toBe('header');
-  expect(tree.children[0]._role).toBe('header');
-  expect(tree.children[0].children[0].name).toBe('nav');
-  expect(tree.children[1].name).toBe('section.hero');
+  expect(tree.clipsContent).toBe(true);
+  expect(tree.children[0].name).toBe('section.hero');
+  expect(tree.children[1].name).toBe('header');
+  expect(tree.children[1]._role).toBe('header');
+  expect(tree.children[1].children[0].name).toBe('nav');
 });
 
-test('keeps margin-driven flex stacks out of auto-layout', () => {
+test('keeps original flex stacks as flow auto-layout without forcing children absolute', () => {
   const heroLeft = frameNode({
     tag: 'div',
     classList: ['hero-left'],
@@ -189,9 +196,135 @@ test('keeps margin-driven flex stacks out of auto-layout', () => {
 
   const [tree] = buildFigmaTree({ annotated: body });
 
-  expect(tree.children[0].layoutMode).toBeUndefined();
+  expect(tree.children[0].layoutMode).toBe('VERTICAL');
+  expect(tree.children[0].primaryAxisSizingMode).toBe('FIXED');
+  expect(tree.children[0].counterAxisSizingMode).toBe('FIXED');
+  expect(tree.children[0].children[0].layoutPositioning).toBeUndefined();
+  expect(tree.children[0].itemSpacing).toBe(32);
   expect(tree.children[0].children[1].y).toBe(282);
   expect(tree.children[0].children[3].y).toBe(695);
+});
+
+test('marks flex children that fill the parent counter axis as fill sizing', () => {
+  const cardHeader = frameNode({
+    tag: 'div',
+    classList: ['card-header'],
+    rect: { x: 24, y: 24, width: 552, height: 23 },
+    computed: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    children: [
+      textContainerNode({
+        tag: 'h3',
+        classList: ['card-title'],
+        text: 'Tetracare - Healthcare Service',
+        rect: { x: 24, y: 24, width: 290, height: 23 },
+      }),
+      frameNode({
+        tag: 'span',
+        classList: ['badge'],
+        rect: { x: 500, y: 24, width: 76, height: 23 },
+      }),
+    ],
+  });
+  const card = frameNode({
+    tag: 'div',
+    classList: ['card'],
+    rect: { x: 0, y: 0, width: 600, height: 240 },
+    computed: {
+      display: 'flex',
+      flexDirection: 'column',
+      paddingTop: '24px',
+      paddingRight: '24px',
+      paddingBottom: '24px',
+      paddingLeft: '24px',
+    },
+    children: [cardHeader],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 600, height: 240 },
+    children: [card],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtHeader = tree.children[0].children[0];
+
+  expect(builtHeader.layoutSizingHorizontal).toBe('FILL');
+  expect(builtHeader.layoutMode).toBe('HORIZONTAL');
+  expect(builtHeader.primaryAxisAlignItems).toBe('SPACE_BETWEEN');
+  expect(builtHeader.primaryAxisSizingMode).toBe('FIXED');
+  expect(builtHeader.counterAxisSizingMode).toBe('FIXED');
+});
+
+test('maps base64 img sources to image nodes', () => {
+  const img = frameNode({
+    tag: 'img',
+    classList: ['avatar'],
+    rect: { x: 12, y: 24, width: 80, height: 64 },
+    computed: {
+      objectFit: 'cover',
+      borderTopLeftRadius: '12px',
+      borderTopRightRadius: '12px',
+      borderBottomRightRadius: '12px',
+      borderBottomLeftRadius: '12px',
+    },
+    imageData: {
+      src: 'data:image/png;base64,aGVsbG8=',
+      alt: 'avatar',
+      naturalWidth: 10,
+      naturalHeight: 10,
+    },
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 120, height: 120 },
+    children: [img],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtImg = tree.children[0];
+
+  expect(builtImg.type).toBe('IMAGE');
+  expect(builtImg.name).toBe('img.avatar');
+  expect(builtImg._image.src).toBe('data:image/png;base64,aGVsbG8=');
+  expect(builtImg._objectFit).toBe('cover');
+  expect(builtImg.cornerRadius).toBe(12);
+});
+
+test('orders children by effective z-index for Figma layer stacking', () => {
+  const low = frameNode({
+    tag: 'div',
+    classList: ['low'],
+    rect: { x: 0, y: 0, width: 100, height: 100 },
+    computed: {
+      position: 'absolute',
+      zIndex: '1',
+    },
+    effectiveZ: 1,
+  });
+  const high = frameNode({
+    tag: 'div',
+    classList: ['high'],
+    rect: { x: 0, y: 0, width: 100, height: 100 },
+    computed: {
+      position: 'absolute',
+      zIndex: '5',
+    },
+    effectiveZ: 5,
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 100, height: 100 },
+    children: [high, low],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+
+  expect(tree.children[0].name).toBe('div.low');
+  expect(tree.children[1].name).toBe('div.high');
 });
 
 test('skips auto-layout grid strategy for complex two-dimensional grids', () => {

@@ -37,33 +37,52 @@ export function buildFigmaTree({ annotated }, { pseudoElements = [], gridStrateg
 }
 
 function buildNode(node, parentContext, ctx, path) {
-  const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer, _pageLayout, _role, svgMarkup } = node;
+  const { computed, rect, tag, text, textRuns = [], children = [], classList, isTextContainer, _pageLayout, _role, svgMarkup, imageData } = node;
   const resolvedRect = resolveRenderedRect(node, parentContext);
   const parentResolvedRect = parentContext?.resolvedRect ?? null;
   const isLeafText = Boolean(text) && children.length === 0;
   const isText = isLeafText && Boolean(isTextContainer);
   const isSvg = tag === 'svg' && Boolean(svgMarkup);
+  const isImage = tag === 'img' && Boolean(imageData?.src);
+  const isAbsolute = isAbsoluteLikeNode(node) || node._layoutPositioning === 'ABSOLUTE';
+  const childLayoutSizing = mapChildLayoutSizing(node, parentContext, resolvedRect);
 
   const base = {
     id: buildStableId(tag, classList, path),
     name: buildName(tag, classList),
-    type: isSvg ? 'SVG' : (isText && text ? 'TEXT' : 'FRAME'),
+    type: isSvg ? 'SVG' : isImage ? 'IMAGE' : (isText && text ? 'TEXT' : 'FRAME'),
     x: Math.round(resolvedRect.x - (parentResolvedRect?.x ?? 0)),
     y: Math.round(resolvedRect.y - (parentResolvedRect?.y ?? 0)),
     width: Math.round(resolvedRect.width),
     height: Math.round(resolvedRect.height),
+    ...(isAbsolute ? { layoutPositioning: 'ABSOLUTE' } : {}),
+    ...childLayoutSizing,
   };
 
   if (isSvg) {
-    const isAbsolute = computed.position === 'absolute' || computed.position === 'fixed';
     return {
       ...base,
       _svgMarkup: svgMarkup,
       opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
-      ...(isAbsolute ? { layoutPositioning: 'ABSOLUTE' } : {}),
       ...(computed.mixBlendMode && computed.mixBlendMode !== 'normal' ? {
         blendMode: computed.mixBlendMode.toUpperCase().replace(/-/g, '_'),
       } : {}),
+    };
+  }
+
+  if (isImage) {
+    return {
+      ...base,
+      _image: imageData,
+      opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
+      ...mapBorderRadius(computed, rect),
+      ...mapBorder(computed),
+      effects: mapBoxShadow(computed),
+      ...(computed.mixBlendMode && computed.mixBlendMode !== 'normal' ? {
+        blendMode: computed.mixBlendMode.toUpperCase().replace(/-/g, '_'),
+      } : {}),
+      ...(computed.objectFit ? { _objectFit: computed.objectFit } : {}),
+      ...(computed.objectPosition ? { _objectPosition: computed.objectPosition } : {}),
     };
   }
 
@@ -83,10 +102,10 @@ function buildNode(node, parentContext, ctx, path) {
   const isGrid = computed.display === 'grid';
   const isFlex = computed.display === 'flex' || computed.display === 'inline-flex';
   const isInlineBlock = computed.display === 'inline-block';
-  const isAbsolute = computed.position === 'absolute' || computed.position === 'fixed';
+  const flexLayoutInfo = isFlex ? getRenderableFlexLayout(node) : null;
 
   const layout = isFlex
-    ? getRenderableFlexLayout(node)
+    ? flexLayoutInfo?.layout
     : isInlineBlock
       ? getRenderableInlineLayout(node)
       : null;
@@ -122,11 +141,14 @@ function buildNode(node, parentContext, ctx, path) {
     effects: mapBoxShadow(computed),
     opacity: roundFloat(parseFloat(computed.opacity ?? 1)),
     ...(layout || {}),
-    ...(isAbsolute ? { layoutPositioning: 'ABSOLUTE' } : {}),
     ...(computed.mixBlendMode && computed.mixBlendMode !== 'normal' ? {
       blendMode: computed.mixBlendMode.toUpperCase().replace(/-/g, '_'),
     } : {}),
   };
+
+  if (_pageLayout || tag === 'body') {
+    frameNode.clipsContent = true;
+  }
 
   // Apply grid strategy when a renderable fallback is available
   const renderableGridStrategy = isGrid ? getRenderableGridStrategy(node, gridStrategy) : null;
@@ -179,8 +201,8 @@ function buildNode(node, parentContext, ctx, path) {
   frameNode.children = pseudoBefore
     .concat(childNodes)
     .concat(
-      children
-        .map((child, index) => buildNode(child, { sourceRect: rect, resolvedRect }, ctx, `${path}.${index}`))
+      getOrderedChildren(children)
+        .map((child, index) => buildNode(child, { sourceRect: rect, resolvedRect, sourceNode: node }, ctx, `${path}.${index}`))
         .filter(Boolean)
     )
     .concat(pseudoTop);
@@ -190,6 +212,46 @@ function buildNode(node, parentContext, ctx, path) {
   }
 
   return frameNode;
+}
+
+function mapChildLayoutSizing(node, parentContext, resolvedRect) {
+  const parentNode = parentContext?.sourceNode;
+  const parentComputed = parentNode?.computed;
+  if (!node || !resolvedRect || !parentContext?.resolvedRect || !isFlexDisplay(parentComputed?.display) || isAbsoluteLikeNode(node)) {
+    return {};
+  }
+
+  const result = {};
+  const parentRect = parentContext.resolvedRect;
+  const parentInnerWidth = Math.max(parentRect.width - parsePx(parentComputed.paddingLeft) - parsePx(parentComputed.paddingRight), 0);
+  const parentInnerHeight = Math.max(parentRect.height - parsePx(parentComputed.paddingTop) - parsePx(parentComputed.paddingBottom), 0);
+  const axis = isRowFlexDirection(parentComputed.flexDirection) ? 'HORIZONTAL' : 'VERTICAL';
+  const flexGrow = parseFloat(node.computed?.flexGrow);
+
+  if (axis === 'VERTICAL' && fillsAxis(resolvedRect.width, parentInnerWidth)) {
+    result.layoutSizingHorizontal = 'FILL';
+  }
+  if (axis === 'HORIZONTAL' && fillsAxis(resolvedRect.height, parentInnerHeight)) {
+    result.layoutSizingVertical = 'FILL';
+  }
+
+  if (Number.isFinite(flexGrow) && flexGrow > 0) {
+    if (axis === 'HORIZONTAL') {
+      result.layoutSizingHorizontal = 'FILL';
+    } else {
+      result.layoutSizingVertical = 'FILL';
+    }
+  }
+
+  return result;
+}
+
+function fillsAxis(childSize, parentInnerSize) {
+  if (!Number.isFinite(childSize) || !Number.isFinite(parentInnerSize) || parentInnerSize <= 0) {
+    return false;
+  }
+
+  return Math.abs(childSize - parentInnerSize) <= Math.max(2, parentInnerSize * 0.02);
 }
 
 function resolveRenderedRect(node, parentContext) {
@@ -355,6 +417,7 @@ function buildPseudoNode(pseudo, path, ctx = {}) {
     y: Math.round(pseudo.y),
     width: Math.round(pseudo.width),
     height: Math.round(pseudo.height),
+    layoutPositioning: 'ABSOLUTE',
     opacity: roundFloat(pseudo.opacity ?? 1),
     fills: pseudoBackgrounds,
     ...pseudoStrokes,
@@ -579,6 +642,49 @@ function buildEmbeddedTextNode(node, ctx, path, resolvedRect = null, nameSuffix 
   };
 }
 
+function getOrderedChildren(children) {
+  const items = (children || [])
+    .filter(Boolean)
+    .map((child, index) => ({
+      child,
+      index,
+      layerZ: getLayerZ(child),
+    }));
+
+  if (items.length <= 1) {
+    return items.map((item) => item.child);
+  }
+
+  const hasLayering = items.some((item) => Number.isFinite(item.layerZ));
+  if (!hasLayering) {
+    return items.map((item) => item.child);
+  }
+
+  return items
+    .sort((a, b) => {
+      const zA = Number.isFinite(a.layerZ) ? a.layerZ : 0;
+      const zB = Number.isFinite(b.layerZ) ? b.layerZ : 0;
+      if (zA !== zB) {
+        return zA - zB;
+      }
+      return a.index - b.index;
+    })
+    .map((item) => item.child);
+}
+
+function getLayerZ(node) {
+  if (!node) {
+    return null;
+  }
+
+  if (Number.isFinite(node.effectiveZ)) {
+    return node.effectiveZ;
+  }
+
+  const zIndex = parseFloat(node.computed?.zIndex);
+  return Number.isFinite(zIndex) ? zIndex : null;
+}
+
 function attachPseudoElements(root, pseudoElements) {
   if (!root || !Array.isArray(pseudoElements) || pseudoElements.length === 0) return;
 
@@ -789,35 +895,76 @@ function getRenderableFlexLayout(node) {
   }
 
   const children = Array.isArray(node.children) ? node.children.filter(Boolean) : [];
+  const layout = mapFlexLayout(node.computed);
   if (children.length === 0) {
-    return mapFlexLayout(node.computed);
+    return { layout: withFlexSizing(node, [], layout) };
   }
 
-  if (children.some((child) => !child?.rect || isAbsoluteLikeNode(child))) {
-    return null;
+  const flowChildren = children.filter((child) => !isAbsoluteLikeNode(child));
+  if (flowChildren.length === 0) {
+    return { layout: withFlexSizing(node, flowChildren, layout) };
+  }
+
+  if (flowChildren.some((child) => !child?.rect)) {
+    return { layout: withFlexSizing(node, flowChildren, layout) };
   }
 
   const axis = isRowFlexDirection(node.computed.flexDirection) ? 'HORIZONTAL' : 'VERTICAL';
-  const detectedAxis = detectLinearChildAxis(children);
-  if (detectedAxis && detectedAxis !== axis) {
-    return null;
+  const measuredSpacing = measureAxisSpacing(flowChildren, axis);
+  const cssSpacing = layout.itemSpacing || 0;
+  if (layout.primaryAxisAlignItems !== 'SPACE_BETWEEN' && measuredSpacing > cssSpacing) {
+    layout.itemSpacing = measuredSpacing;
   }
 
-  if (hasSignificantFlexChildMargins(children, axis)) {
-    return null;
+  return {
+    layout: withFlexSizing(node, flowChildren, layout),
+  };
+}
+
+function withFlexSizing(node, flowChildren, layout) {
+  const axis = isRowFlexDirection(node.computed.flexDirection) ? 'HORIZONTAL' : 'VERTICAL';
+  const result = { ...layout };
+  const primaryFreeSpace = measureFlexFreeSpace(node, flowChildren, axis);
+  const counterFreeSpace = measureFlexFreeSpace(node, flowChildren, axis === 'HORIZONTAL' ? 'VERTICAL' : 'HORIZONTAL');
+  const primaryAlign = String(result.primaryAxisAlignItems || 'MIN').toUpperCase();
+  const counterAlign = String(result.counterAxisAlignItems || 'MIN').toUpperCase();
+
+  if (primaryFreeSpace > 2 || primaryAlign === 'CENTER' || primaryAlign === 'MAX' || primaryAlign === 'SPACE_BETWEEN') {
+    result.primaryAxisSizingMode = 'FIXED';
   }
 
-  const gaps = measureAxisGaps(children, axis);
-  if (gaps.length > 1) {
-    const minGap = Math.min(...gaps);
-    const maxGap = Math.max(...gaps);
-    const tolerance = Math.max(8, Math.round(Math.abs(minGap) * 0.25));
-    if (maxGap - minGap > tolerance) {
-      return null;
-    }
+  if (counterFreeSpace > 2 || counterAlign === 'CENTER' || counterAlign === 'MAX' || counterAlign === 'STRETCH') {
+    result.counterAxisSizingMode = 'FIXED';
   }
 
-  return mapFlexLayout(node.computed);
+  return result;
+}
+
+function measureFlexFreeSpace(node, children, axis) {
+  const rect = node?.rect;
+  if (!rect) {
+    return 0;
+  }
+
+  const computed = node.computed || {};
+  const renderedSize = axis === 'HORIZONTAL' ? rect.width : rect.height;
+  const startPadding = axis === 'HORIZONTAL' ? parsePx(computed.paddingLeft) : parsePx(computed.paddingTop);
+  const endPadding = axis === 'HORIZONTAL' ? parsePx(computed.paddingRight) : parsePx(computed.paddingBottom);
+  const items = (children || []).filter((child) => child?.rect);
+
+  if (items.length === 0) {
+    return Math.max(renderedSize - startPadding - endPadding, 0);
+  }
+
+  if (axis === 'HORIZONTAL') {
+    const left = Math.min(...items.map((child) => child.rect.x));
+    const right = Math.max(...items.map((child) => child.rect.x + child.rect.width));
+    return Math.max(renderedSize - startPadding - endPadding - (right - left), 0);
+  }
+
+  const top = Math.min(...items.map((child) => child.rect.y));
+  const bottom = Math.max(...items.map((child) => child.rect.y + child.rect.height));
+  return Math.max(renderedSize - startPadding - endPadding - (bottom - top), 0);
 }
 
 function isRowFlexDirection(flexDirection) {
@@ -831,13 +978,29 @@ function isAbsoluteLikeNode(node) {
 
 function hasSignificantFlexChildMargins(children, axis) {
   return children.some((child) => {
-    const computed = child?.computed || {};
+  const computed = child?.computed || {};
     if (axis === 'HORIZONTAL') {
       return Math.abs(parsePx(computed.marginLeft)) > 0.5 || Math.abs(parsePx(computed.marginRight)) > 0.5;
     }
 
     return Math.abs(parsePx(computed.marginTop)) > 0.5 || Math.abs(parsePx(computed.marginBottom)) > 0.5;
   });
+}
+
+function hasUnevenFlexChildGaps(children, axis) {
+  const gaps = measureAxisGaps(children, axis);
+  if (gaps.length <= 1) {
+    return false;
+  }
+
+  const minGap = Math.min(...gaps);
+  const maxGap = Math.max(...gaps);
+  const tolerance = Math.max(8, Math.round(Math.abs(minGap) * 0.25));
+  return maxGap - minGap > tolerance;
+}
+
+function isFlexDisplay(display) {
+  return display === 'flex' || display === 'inline-flex';
 }
 
 function detectLinearChildAxis(children) {

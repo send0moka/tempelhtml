@@ -150,6 +150,7 @@ function walkDOMInBrowser() {
     const csAfter = window.getComputedStyle(el, '::after');
     const tag = el.tagName.toLowerCase();
     const isSvg = tag === 'svg';
+    const isImage = tag === 'img';
 
     // Skip invisible/zero-size elements
     if (rect.width === 0 && rect.height === 0 && cs.position === 'static') return null;
@@ -180,8 +181,9 @@ function walkDOMInBrowser() {
     const afterData = extractPseudoElementData(el, tag, cs, csAfter, 'after');
     const formControl = extractFormControlData(el, tag, cs);
     const svgMarkup = isSvg ? serializeSvgElement(el, rect) : null;
+    const imageData = isImage ? extractImageData(el) : null;
 
-    const children = isSvg || isTextContainer
+    const children = isSvg || isImage || isTextContainer
       ? []
       : Array.from(el.childNodes)
           .map((child) => getChildNode(child, el, cs, depth + 1))
@@ -198,6 +200,7 @@ function walkDOMInBrowser() {
       computed: extractRelevantStyles(cs),
       ...(formControl ? { formControl } : {}),
       ...(svgMarkup ? { svgMarkup } : {}),
+      ...(imageData ? { imageData } : {}),
       pseudo: {
         before: beforeData,
         after: afterData,
@@ -261,6 +264,9 @@ function walkDOMInBrowser() {
       justifyContent: cs.justifyContent,
       alignItems: cs.alignItems,
       flexWrap: cs.flexWrap,
+      flexGrow: cs.flexGrow,
+      flexShrink: cs.flexShrink,
+      flexBasis: cs.flexBasis,
       gap: cs.gap,
       columnGap: cs.columnGap,
       rowGap: cs.rowGap,
@@ -288,6 +294,8 @@ function walkDOMInBrowser() {
       backgroundImage: cs.backgroundImage,
       backgroundSize: cs.backgroundSize,
       backgroundPosition: cs.backgroundPosition,
+      objectFit: cs.objectFit,
+      objectPosition: cs.objectPosition,
       color: cs.color,
       opacity: cs.opacity,
       borderRadius: cs.borderRadius,
@@ -339,6 +347,20 @@ function walkDOMInBrowser() {
       inset: cs.inset,
       // Content (for pseudo-elements)
       content: cs.content,
+    };
+  }
+
+  function extractImageData(el) {
+    const src = String(el.currentSrc || el.src || el.getAttribute('src') || '').trim();
+    if (!src) {
+      return null;
+    }
+
+    return {
+      src,
+      alt: el.getAttribute('alt') || '',
+      naturalWidth: Number.isFinite(el.naturalWidth) ? el.naturalWidth : 0,
+      naturalHeight: Number.isFinite(el.naturalHeight) ? el.naturalHeight : 0,
     };
   }
 

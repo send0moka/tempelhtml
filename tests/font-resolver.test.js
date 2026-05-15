@@ -4,7 +4,7 @@ function node(computed, children = []) {
   return { computed, children };
 }
 
-test('resolves unavailable named serif families through the CSS font stack', async () => {
+test('preserves named font families and still honors available fallback fonts in the stack', async () => {
   const domTree = node({}, [
     node({
       fontFamily: 'Marcellus, serif',
@@ -31,11 +31,11 @@ test('resolves unavailable named serif families through the CSS font stack', asy
   const fontMap = await resolveFonts(domTree);
 
   expect(fontMap['Marcellus, serif|400|normal']).toEqual({
-    family: 'Georgia',
+    family: 'Marcellus',
     style: 'Regular',
   });
   expect(fontMap['Lora, serif|400|italic']).toEqual({
-    family: 'Georgia',
+    family: 'Lora',
     style: 'Italic',
   });
   expect(fontMap['Brand Serif, "Playfair Display", serif|700|normal']).toEqual({
@@ -43,7 +43,7 @@ test('resolves unavailable named serif families through the CSS font stack', asy
     style: 'Bold',
   });
   expect(fontMap['Some Sans, sans-serif|400|normal']).toEqual({
-    family: 'Inter',
+    family: 'Some Sans',
     style: 'Regular',
   });
 });
