@@ -3,27 +3,63 @@
 <head>
   <style>
     :root {
+      color-scheme: dark;
+      --bg: #000000;
+      --bg-top: #000000;
+      --panel: #1b1b1b;
+      --field: #050505;
+      --ink: #f4f4f4;
+      --muted: #a8a8a8;
+      --line: #2a2a2a;
+      --line-strong: #3d3d3d;
+      --selected: #333333;
+      --surface-hover: #111111;
+      --accent: #f70f0f;
+      --accent-strong: #c90c0c;
+      --on-accent: #ffffff;
+      --status-danger: #f70f0f;
+      --status-success: #d6d6d6;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    [data-theme="light"] {
       color-scheme: light;
-      --bg: #f5f1e8;
-      --bg-top: #fbf7ef;
-      --panel: #fffaf2;
-      --ink: #1f1b16;
-      --muted: #6f665d;
-      --line: #e6dccd;
-      --accent: #a86f2f;
-      --accent-strong: #7f4e1e;
+      --bg: #f4f4f4;
+      --bg-top: #ffffff;
+      --panel: #ffffff;
+      --field: #fafafa;
+      --ink: #0a0a0a;
+      --muted: #5d5d5d;
+      --line: #d8d8d8;
+      --line-strong: #bcbcbc;
+      --selected: #ececec;
+      --surface-hover: #f1f1f1;
+      --accent: #f70f0f;
+      --accent-strong: #d80d0d;
+      --on-accent: #ffffff;
+      --status-danger: #d80d0d;
+      --status-success: #242424;
+      --shadow: rgba(0, 0, 0, 0.08);
     }
 
     [data-theme="dark"] {
       color-scheme: dark;
-      --bg: #18140f;
-      --bg-top: #1f1913;
-      --panel: #211c14;
-      --ink: #f0ead9;
-      --muted: #9b9080;
-      --line: #332c20;
-      --accent: #d4913e;
-      --accent-strong: #e8a84e;
+      --bg: #000000;
+      --bg-top: #000000;
+      --panel: #1b1b1b;
+      --field: #050505;
+      --ink: #f4f4f4;
+      --muted: #a8a8a8;
+      --line: #2a2a2a;
+      --line-strong: #3d3d3d;
+      --selected: #333333;
+      --surface-hover: #111111;
+      --accent: #f70f0f;
+      --accent-strong: #c90c0c;
+      --on-accent: #ffffff;
+      --status-danger: #f70f0f;
+      --status-success: #d6d6d6;
+      --shadow: rgba(0, 0, 0, 0.35);
     }
 
     * {
@@ -74,7 +110,8 @@
       font-size: 14px;
       line-height: 1.2;
       margin-bottom: 2px;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
+      color: var(--accent);
     }
 
     .brand p {
@@ -101,8 +138,8 @@
       padding: 0 9px;
       border-radius: 8px;
       border: 1px solid var(--line);
-      background: var(--panel);
-      color: var(--muted);
+      background: var(--bg);
+      color: var(--ink);
       font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
@@ -111,7 +148,8 @@
 
     .icon-btn:hover {
       border-color: var(--accent);
-      color: var(--accent);
+      background: var(--surface-hover);
+      color: var(--ink);
     }
 
     .icon-btn svg {
@@ -126,7 +164,7 @@
       display: grid;
       gap: 6px;
       position: relative;
-      box-shadow: 0 10px 24px rgba(37, 27, 16, 0.05);
+      box-shadow: 0 10px 24px var(--shadow);
     }
 
     .field label,
@@ -148,7 +186,7 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel);
+      background: var(--field);
       color: var(--ink);
       padding: 7px 9px;
       appearance: none;
@@ -195,8 +233,8 @@
       padding: 0 9px;
       border-radius: 8px;
       border: 1px solid var(--line);
-      background: var(--panel);
-      color: var(--muted);
+      background: var(--bg);
+      color: var(--ink);
       font-size: 11px;
       font-weight: 600;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
@@ -204,13 +242,15 @@
 
     .chip:hover {
       border-color: var(--accent);
-      color: var(--accent);
+      background: var(--surface-hover);
+      color: var(--ink);
     }
 
     .chip.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
+      background: var(--selected);
+      border-color: var(--line-strong);
+      color: var(--ink);
+      box-shadow: inset 0 -2px 0 var(--accent);
     }
 
     .chip svg {
@@ -236,12 +276,13 @@
       height: 34px;
       border-radius: 8px;
       background: var(--accent);
-      color: #fff;
+      color: var(--on-accent);
       font-weight: 600;
     }
 
     .primary:hover {
       background: var(--accent-strong);
+      color: var(--on-accent);
     }
 
     .primary:disabled {
@@ -259,7 +300,7 @@
     .progress > div {
       width: 0%;
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), #e8c97a);
+      background: var(--accent);
       transition: width 0.2s linear;
     }
 
@@ -275,11 +316,11 @@
     }
 
     #status.error {
-      color: #b42318;
+      color: var(--status-danger);
     }
 
     #status.success {
-      color: #1a7f37;
+      color: var(--status-success);
     }
   </style>
 </head>
@@ -287,7 +328,7 @@
   <div class="shell">
     <div class="top-bar">
       <div class="brand">
-        <h2>tempelhtml</h2>
+        <h2>Morphus</h2>
         <p>Paste HTML, build in Figma.</p>
       </div>
       <div class="actions">
@@ -409,7 +450,7 @@
     };
 
     const state = {
-      currentTheme: store.get('tempelhtml-theme') || 'system',
+      currentTheme: store.get('morphus-theme') || 'dark',
       currentPreset: 'desktop',
       selectedPresets: ['desktop'],
       viewportWidths: {
@@ -576,7 +617,7 @@
 
     function applyTheme(theme) {
       state.currentTheme = theme;
-      store.set('tempelhtml-theme', theme);
+      store.set('morphus-theme', theme);
       const isDark = theme === 'dark' || (theme === 'system' && sysDark.matches);
       htmlEl.setAttribute('data-theme', isDark ? 'dark' : 'light');
       themeIcon.innerHTML = THEME_ICONS[theme];

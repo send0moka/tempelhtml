@@ -1,5 +1,5 @@
 /**
- * Shared tempelhtml conversion pipeline.
+ * Shared Morphus conversion pipeline.
  * Reused by the CLI and the local HTTP bridge for the Figma plugin.
  */
 

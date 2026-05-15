@@ -2,7 +2,7 @@
 
 ## Overview
 
-tempelhtml renders HTML in Playwright, extracts computed styles, maps the result to a Figma-ready JSON tree, and lets the Figma plugin build the design locally.
+Morphus renders HTML in Playwright, extracts computed styles, maps the result to a Figma-ready JSON tree, and lets the Figma plugin build the design locally.
 
 1. Playwright renders the page and captures bounding boxes plus computed styles.
 2. The Node pipeline normalizes fonts, stacking order, and layout hints.

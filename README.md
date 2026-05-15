@@ -1,13 +1,13 @@
 ---
-title: tempelhtml
+title: Morphus
 sdk: docker
 app_port: 7860
 pinned: false
 ---
 
-# tempelhtml
+# Morphus
 
-HTML to Figma converter with a local HTML-first flow.
+Morphus converts HTML into editable Figma designs with a local HTML-first flow.
 
 ## Flow
 1. Playwright renders the HTML and captures computed styles.
@@ -22,7 +22,7 @@ npx playwright install chromium
 npm run server
 ```
 
-Then in Figma: open the tempelhtml plugin, paste or upload HTML, and click `Convert & Build`.
+Then in Figma: open the Morphus plugin, paste or upload HTML, and click `Convert & Build`.
 
 ## Commands
 ```bash

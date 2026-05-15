@@ -60,13 +60,13 @@ async function stabilizePage(page) {
       const cs = window.getComputedStyle(el);
       return cs.animationName !== 'none' || cs.transitionDuration !== '0s';
     });
-    animated.forEach((el) => el.setAttribute('data-tempelhtml-animated', '1'));
+    animated.forEach((el) => el.setAttribute('data-morphus-animated', '1'));
 
     const style = document.createElement('style');
     style.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; }';
     document.head.appendChild(style);
 
-    document.querySelectorAll('[data-tempelhtml-animated="1"]').forEach((el) => {
+    document.querySelectorAll('[data-morphus-animated="1"]').forEach((el) => {
       const cs = window.getComputedStyle(el);
       if (cs.opacity === '0' && shouldForceAnimatedElementVisible(el, cs)) {
         el.style.opacity = '1';
@@ -166,14 +166,14 @@ async function stabilizePage(page) {
             continue;
           }
           if (rect.top >= cutoffY) {
-            row.setAttribute('data-tempelhtml-paginated-row-clipped', '1');
+            row.setAttribute('data-morphus-paginated-row-clipped', '1');
             row.style.display = 'none';
             hiddenCount++;
           }
         }
 
         if (hiddenCount > 0) {
-          container.setAttribute('data-tempelhtml-paginated-preview', '1');
+          container.setAttribute('data-morphus-paginated-preview', '1');
         }
       }
     }
@@ -273,7 +273,7 @@ async function waitForCanvasPaint(page) {
       }
 
       const now = performance.now();
-      const state = window.__tempelhtmlCanvasCaptureState || {
+      const state = window.__morphusCanvasCaptureState || {
         startedAt: now,
         lastSignature: '',
         stableCount: 0,
@@ -293,7 +293,7 @@ async function waitForCanvasPaint(page) {
         state.stableCount = 0;
       }
 
-      window.__tempelhtmlCanvasCaptureState = state;
+      window.__morphusCanvasCaptureState = state;
       return state.stableCount >= 2 && now - state.startedAt >= 500;
 
       function captureCanvasSnapshot(canvas) {
@@ -310,7 +310,7 @@ async function waitForCanvasPaint(page) {
           return { readable: false };
         }
 
-        canvas.__tempelhtmlCanvasCaptureSrc = src;
+        canvas.__morphusCanvasCaptureSrc = src;
         return {
           readable: Boolean(src && src !== 'data:,'),
           signature: `${width}x${height}:${src.length}:${hashString(src)}`,
@@ -643,7 +643,7 @@ function walkDOMInBrowser() {
       return null;
     }
 
-    let src = String(el.__tempelhtmlCanvasCaptureSrc || '');
+    let src = String(el.__morphusCanvasCaptureSrc || '');
     try {
       src = src || el.toDataURL('image/png');
     } catch (err) {
@@ -759,7 +759,7 @@ function walkDOMInBrowser() {
       const cloneEl = cloneElements[index];
       if (!sourceEl || !cloneEl) continue;
 
-      cloneEl.removeAttribute('data-tempelhtml-animated');
+      cloneEl.removeAttribute('data-morphus-animated');
       const cs = window.getComputedStyle(sourceEl);
       const isRoot = index === 0;
 

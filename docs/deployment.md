@@ -1,6 +1,6 @@
 # Public Deployment
 
-tempelhtml cannot be deployed as a static-only site because the converter runs Node.js and Playwright/Chromium. To let other people use the Figma plugin without `npm run server`, deploy the converter as a public HTTPS Node service, then point the plugin to that service.
+Morphus cannot be deployed as a static-only site because the converter runs Node.js and Playwright/Chromium. To let other people use the Figma plugin without `npm run server`, deploy the converter as a public HTTPS Node service, then point the plugin to that service.
 
 ## 1. Deploy The Converter
 

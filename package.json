@@ -1,7 +1,7 @@
 {
-  "name": "tempelhtml",
+  "name": "morphus",
   "version": "0.1.0",
-  "description": "HTML to Figma converter with a deterministic local pipeline",
+  "description": "Morphus converts HTML into editable Figma designs with a deterministic local pipeline",
   "type": "module",
   "main": "scripts/convert.js",
   "scripts": {

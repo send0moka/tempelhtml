@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * tempelhtml CLI
+ * Morphus CLI
  * Usage: node scripts/convert.js --input ./examples/page.html --output ./out/page.json
  */
 

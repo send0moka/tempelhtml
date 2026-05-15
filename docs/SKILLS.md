@@ -1,8 +1,8 @@
-# tempelhtml Project Context
+# Morphus Project Context
 
 ## What This Project Does
 
-tempelhtml converts HTML/CSS pages into Figma designs through a deterministic local pipeline.
+Morphus converts HTML/CSS pages into Figma designs through a deterministic local pipeline.
 
 **Input:** HTML file or pasted HTML
 **Output:** JSON snapshot that the Figma plugin uses to build the page

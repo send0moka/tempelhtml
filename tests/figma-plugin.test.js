@@ -612,7 +612,7 @@ test('creates local styles only for reusable values and prunes stale generated s
   paintStyles.push(
     {
       id: 'stale-paint',
-      name: 'TempelHTML / Color / Purple / 900 / OLD',
+      name: 'Morphus / Color / Purple / 900 / OLD',
       paints: [],
       remove() {
         this.removed = true;
@@ -629,7 +629,7 @@ test('creates local styles only for reusable values and prunes stale generated s
   );
   textStyles.push({
     id: 'stale-text',
-    name: 'TempelHTML / Typography / Body / XS / Regular / OLD',
+    name: 'Morphus / Typography / Body / XS / Regular / OLD',
     remove() {
       this.removed = true;
     },
@@ -680,8 +680,8 @@ test('creates local styles only for reusable values and prunes stale generated s
 
   const activePaintStyles = paintStyles.filter((style) => !style.removed);
   const activeTextStyles = textStyles.filter((style) => !style.removed);
-  const generatedPaintStyles = activePaintStyles.filter((style) => style.name.startsWith('TempelHTML / '));
-  const generatedTextStyles = activeTextStyles.filter((style) => style.name.startsWith('TempelHTML / '));
+  const generatedPaintStyles = activePaintStyles.filter((style) => style.name.startsWith('Morphus / '));
+  const generatedTextStyles = activeTextStyles.filter((style) => style.name.startsWith('Morphus / '));
 
   expect(paintStyles.find((style) => style.id === 'stale-paint').removed).toBe(true);
   expect(textStyles.find((style) => style.id === 'stale-text').removed).toBe(true);
@@ -776,8 +776,8 @@ test('uses document title as local style namespace without pruning other imports
 
   expect(activePaintNames.some((name) => name.startsWith('Second Landing / Color / '))).toBe(true);
   expect(activeTextNames.some((name) => name.startsWith('Second Landing / Typography / Body / LG / Regular'))).toBe(true);
-  expect(activePaintNames.some((name) => name.startsWith('TempelHTML / '))).toBe(false);
-  expect(activeTextNames.some((name) => name.startsWith('TempelHTML / '))).toBe(false);
+  expect(activePaintNames.some((name) => name.startsWith('Morphus / '))).toBe(false);
+  expect(activeTextNames.some((name) => name.startsWith('Morphus / '))).toBe(false);
 });
 
 test('falls back to the html title tag when snapshot metadata is missing', async () => {
@@ -882,7 +882,7 @@ test('converts and builds multiple viewport presets from one plugin action', asy
   const done = uiMessages.filter((message) => message.type === 'DONE').pop();
   expect(done.nodeCount).toBe(2);
   expect(done.variants).toBe(2);
-  expect(notifications.pop()).toBe('tempelhtml: 2 viewports, 2 nodes built');
+  expect(notifications.pop()).toBe('Morphus: 2 viewports, 2 nodes built');
 });
 
 test('imports inline SVG markup as a rendered Figma node', async () => {

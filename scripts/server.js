@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Local tempelhtml bridge for the Figma plugin.
+ * Local Morphus bridge for the Figma plugin.
  * The plugin UI sends HTML here, and this server returns the converted JSON.
  */
 
@@ -8,7 +8,7 @@ import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { convertHtmlString } from '../src/pipeline/convert.js';
 
-const PORT = Number.parseInt(process.env.PORT ?? process.env.TEMPELHTML_PORT ?? '3210', 10);
+const PORT = Number.parseInt(process.env.PORT ?? process.env.MORPHUS_PORT ?? '3210', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const jobs = new Map();
 
@@ -103,7 +103,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-  console.log(`tempelhtml server listening on http://${displayHost}:${PORT}`);
+  console.log(`Morphus server listening on http://${displayHost}:${PORT}`);
 });
 
 async function runJob(jobId, body) {
