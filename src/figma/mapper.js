@@ -237,7 +237,9 @@ function mapChildLayoutSizing(node, parentContext, resolvedRect) {
 
   if (Number.isFinite(flexGrow) && flexGrow > 0) {
     if (axis === 'HORIZONTAL') {
-      result.layoutSizingHorizontal = 'FILL';
+      if (!shouldHugSingleTextFlexChild(parentNode, node, axis)) {
+        result.layoutSizingHorizontal = 'FILL';
+      }
     } else {
       result.layoutSizingVertical = 'FILL';
     }
@@ -894,13 +896,17 @@ function getRenderableFlexLayout(node) {
     return null;
   }
 
-  const children = Array.isArray(node.children) ? node.children.filter(Boolean) : [];
+  const children = getPresentChildren(node);
   const layout = mapFlexLayout(node.computed);
   if (children.length === 0) {
     return { layout: withFlexSizing(node, [], layout) };
   }
 
-  const flowChildren = children.filter((child) => !isAbsoluteLikeNode(child));
+  const flowChildren = getFlowChildren(node);
+  if (shouldStartAlignSingleTextFlexRow(node, flowChildren, layout)) {
+    layout.primaryAxisAlignItems = 'MIN';
+  }
+
   if (flowChildren.length === 0) {
     return { layout: withFlexSizing(node, flowChildren, layout) };
   }
@@ -974,6 +980,94 @@ function isRowFlexDirection(flexDirection) {
 function isAbsoluteLikeNode(node) {
   const position = node?.computed?.position;
   return position === 'absolute' || position === 'fixed';
+}
+
+function getPresentChildren(node) {
+  return Array.isArray(node?.children) ? node.children.filter(Boolean) : [];
+}
+
+function getFlowChildren(node) {
+  return getPresentChildren(node).filter((child) => !isAbsoluteLikeNode(child));
+}
+
+function shouldStartAlignSingleTextFlexRow(node, flowChildren, layout) {
+  const axis = isRowFlexDirection(node?.computed?.flexDirection) ? 'HORIZONTAL' : 'VERTICAL';
+  if (axis !== 'HORIZONTAL' || flowChildren.length !== 1 || !isTextLikeNode(flowChildren[0])) {
+    return false;
+  }
+
+  if (!singleTextChildUsesPrimaryStretch(node, flowChildren[0])) {
+    return false;
+  }
+
+  if (hasVisibleFrameSurface(node?.computed)) {
+    return false;
+  }
+
+  const primaryAlign = String(layout?.primaryAxisAlignItems || 'MIN').toUpperCase();
+  return primaryAlign === 'CENTER' || primaryAlign === 'MAX' || primaryAlign === 'SPACE_BETWEEN';
+}
+
+function singleTextChildUsesPrimaryStretch(parentNode, childNode) {
+  const flexGrow = parseFloat(childNode?.computed?.flexGrow);
+  if (Number.isFinite(flexGrow) && flexGrow > 0) {
+    return true;
+  }
+
+  const parentRect = parentNode?.rect;
+  const childRect = childNode?.rect;
+  if (!parentRect || !childRect) {
+    return false;
+  }
+
+  const computed = parentNode.computed || {};
+  const parentInnerWidth = Math.max(parentRect.width - parsePx(computed.paddingLeft) - parsePx(computed.paddingRight), 0);
+  return fillsAxis(childRect.width, parentInnerWidth);
+}
+
+function shouldHugSingleTextFlexChild(parentNode, childNode, axis) {
+  if (axis !== 'HORIZONTAL' || !parentNode || !childNode) {
+    return false;
+  }
+
+  const flowChildren = getFlowChildren(parentNode);
+  if (flowChildren.length !== 1 || flowChildren[0] !== childNode || !isTextLikeNode(childNode)) {
+    return false;
+  }
+
+  return shouldStartAlignSingleTextFlexRow(parentNode, flowChildren, mapFlexLayout(parentNode.computed || {}));
+}
+
+function isTextLikeNode(node) {
+  return Boolean(node?.text && node?.isTextContainer);
+}
+
+function hasVisibleFrameSurface(computed = {}) {
+  if (!isTransparentCssColor(computed.backgroundColor)) {
+    return true;
+  }
+
+  const backgroundImage = String(computed.backgroundImage || 'none').trim().toLowerCase();
+  if (backgroundImage && backgroundImage !== 'none') {
+    return true;
+  }
+
+  const boxShadow = String(computed.boxShadow || 'none').trim().toLowerCase();
+  if (boxShadow && boxShadow !== 'none') {
+    return true;
+  }
+
+  return hasVisibleBorder(computed);
+}
+
+function hasVisibleBorder(computed = {}) {
+  const sides = ['Top', 'Right', 'Bottom', 'Left'];
+  return sides.some((side) => {
+    const width = parsePx(computed[`border${side}Width`] ?? computed.borderWidth);
+    const style = String(computed[`border${side}Style`] ?? computed.borderStyle ?? 'none').toLowerCase();
+    const color = computed[`border${side}Color`] ?? computed.borderColor ?? computed.color;
+    return width > 0 && style !== 'none' && style !== 'hidden' && !isTransparentCssColor(color);
+  });
 }
 
 function hasSignificantFlexChildMargins(children, axis) {

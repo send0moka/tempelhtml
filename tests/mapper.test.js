@@ -259,6 +259,113 @@ test('marks flex children that fill the parent counter axis as fill sizing', () 
   expect(builtHeader.counterAxisSizingMode).toBe('FIXED');
 });
 
+test('left-aligns a single text item in a transparent flex row without class-specific rules', () => {
+  const title = textContainerNode({
+    tag: 'h3',
+    classList: ['title'],
+    text: 'AdaptyTraining - Fitness Coach',
+    rect: { x: 24, y: 24, width: 552, height: 23 },
+    computed: {
+      flexGrow: '1',
+      textAlign: 'center',
+    },
+  });
+  const header = frameNode({
+    tag: 'div',
+    classList: ['headline-row'],
+    rect: { x: 24, y: 24, width: 552, height: 23 },
+    computed: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    children: [title],
+  });
+  const card = frameNode({
+    tag: 'div',
+    classList: ['card'],
+    rect: { x: 0, y: 0, width: 600, height: 120 },
+    computed: {
+      display: 'flex',
+      flexDirection: 'column',
+      paddingTop: '24px',
+      paddingRight: '24px',
+      paddingBottom: '24px',
+      paddingLeft: '24px',
+    },
+    children: [header],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 600, height: 120 },
+    children: [card],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtHeader = tree.children[0].children[0];
+  const builtTitle = builtHeader.children[0];
+
+  expect(builtHeader.layoutSizingHorizontal).toBe('FILL');
+  expect(builtHeader.primaryAxisAlignItems).toBe('MIN');
+  expect(builtTitle.layoutSizingHorizontal).toBeUndefined();
+});
+
+test('keeps multi-item transparent flex rows centered and stretchable', () => {
+  const title = textContainerNode({
+    tag: 'h3',
+    classList: ['title'],
+    text: 'PayrollHub SaaS',
+    rect: { x: 24, y: 24, width: 420, height: 23 },
+    computed: {
+      flexGrow: '1',
+    },
+  });
+  const badge = frameNode({
+    tag: 'span',
+    classList: ['badge'],
+    rect: { x: 466, y: 24, width: 110, height: 23 },
+  });
+  const header = frameNode({
+    tag: 'div',
+    classList: ['headline-row'],
+    rect: { x: 24, y: 24, width: 552, height: 23 },
+    computed: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'stretch',
+    },
+    children: [title, badge],
+  });
+  const card = frameNode({
+    tag: 'div',
+    classList: ['card'],
+    rect: { x: 0, y: 0, width: 600, height: 120 },
+    computed: {
+      display: 'flex',
+      flexDirection: 'column',
+      paddingTop: '24px',
+      paddingRight: '24px',
+      paddingBottom: '24px',
+      paddingLeft: '24px',
+    },
+    children: [header],
+  });
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 600, height: 120 },
+    children: [card],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtHeader = tree.children[0].children[0];
+  const builtTitle = builtHeader.children[0];
+
+  expect(builtHeader.layoutSizingHorizontal).toBe('FILL');
+  expect(builtHeader.primaryAxisAlignItems).toBe('CENTER');
+  expect(builtHeader.counterAxisAlignItems).toBe('STRETCH');
+  expect(builtTitle.layoutSizingHorizontal).toBe('FILL');
+});
+
 test('maps base64 img sources to image nodes', () => {
   const img = frameNode({
     tag: 'img',

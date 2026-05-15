@@ -2111,6 +2111,8 @@ function applySmartAutoLayoutSizing(frame, spec, strategy) {
       );
     } catch (err) {}
   }
+
+  applyChildLayoutSizing(frame, sourceSpec);
 }
 
 function determineAutoLayoutSizing(spec) {
