@@ -51,6 +51,8 @@ async function extractFromPage(page) {
 }
 
 async function stabilizePage(page) {
+  await page.waitForLoadState('networkidle');
+
   await page.evaluate(() => {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
 
@@ -66,16 +68,75 @@ async function stabilizePage(page) {
 
     document.querySelectorAll('[data-tempelhtml-animated="1"]').forEach((el) => {
       const cs = window.getComputedStyle(el);
-      if (cs.opacity === '0') {
+      if (cs.opacity === '0' && shouldForceAnimatedElementVisible(el, cs)) {
         el.style.opacity = '1';
-      }
-      if (cs.transform !== 'none') {
-        el.style.transform = 'none';
+        if (isTranslateOnlyTransform(cs.transform)) {
+          el.style.transform = 'none';
+        }
       }
     });
-  });
 
-  await page.waitForLoadState('networkidle');
+    function shouldForceAnimatedElementVisible(el, cs) {
+      if (cs.display === 'none' || cs.visibility === 'hidden') {
+        return false;
+      }
+
+      if (cs.position === 'absolute' || cs.position === 'fixed') {
+        return false;
+      }
+
+      if (el.closest('[hidden], [aria-hidden="true"], [inert]')) {
+        return false;
+      }
+
+      if (hasLiveOrProgressSemantics(el)) {
+        return false;
+      }
+
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }
+
+    function hasLiveOrProgressSemantics(el) {
+      if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+
+      const role = String(el.getAttribute('role') || '').toLowerCase();
+      if (role === 'progressbar' || role === 'status' || role === 'alert') {
+        return true;
+      }
+
+      if (el.hasAttribute('aria-busy') || el.hasAttribute('aria-live')) {
+        return true;
+      }
+
+      return Boolean(el.querySelector('progress, meter, [role="progressbar"], [aria-busy], [aria-live]'));
+    }
+
+    function isTranslateOnlyTransform(value) {
+      if (!value || value === 'none') {
+        return false;
+      }
+
+      const text = String(value).trim();
+      const matrixMatch = text.match(/^matrix\(([^)]+)\)$/i);
+      if (matrixMatch) {
+        const values = matrixMatch[1]
+          .split(',')
+          .map((part) => parseFloat(part.trim()));
+        if (values.length === 6 && values.every((number) => Number.isFinite(number))) {
+          const tolerance = 0.001;
+          return Math.abs(values[0] - 1) <= tolerance
+            && Math.abs(values[1]) <= tolerance
+            && Math.abs(values[2]) <= tolerance
+            && Math.abs(values[3] - 1) <= tolerance;
+        }
+      }
+
+      return /^translate(?:3d|x|y)?\(/i.test(text);
+    }
+  });
 }
 
 function normalizeBaseUrl(baseUrl) {
@@ -154,6 +215,7 @@ function walkDOMInBrowser() {
 
     // Skip invisible/zero-size elements
     if (rect.width === 0 && rect.height === 0 && cs.position === 'static') return null;
+    if (isVisuallyHiddenElement(cs)) return null;
 
     const rawText = normalizeTextContent(el.innerText || el.textContent || '');
     const hasVisualBox =
@@ -348,6 +410,17 @@ function walkDOMInBrowser() {
       // Content (for pseudo-elements)
       content: cs.content,
     };
+  }
+
+  function isVisuallyHiddenElement(cs) {
+    if (!cs) {
+      return true;
+    }
+
+    const opacity = parseFloat(cs.opacity);
+    return cs.display === 'none'
+      || cs.visibility === 'hidden'
+      || (Number.isFinite(opacity) && opacity <= 0);
   }
 
   function extractImageData(el) {

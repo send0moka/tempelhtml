@@ -25,6 +25,100 @@ test('captures document title from the rendered HTML', async () => {
   expect(domTree).toBeTruthy();
 }, 30000);
 
+test('does not reveal hidden animated progress overlays', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      body { margin: 0; }
+      .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100px;
+        height: 100px;
+        opacity: 0;
+        transition: opacity 200ms ease;
+        background: #0d1020;
+        color: #fff;
+      }
+      .content { width: 320px; height: 120px; background: #f4f4f4; }
+    </style>
+    <div class="loading-overlay" role="status" aria-live="polite">
+      <p>Memuat...</p>
+      <p>0%</p>
+      <progress value="0" max="100"></progress>
+    </div>
+    <main class="content">Ready</main>
+  `, {
+    width: 360,
+    height: 160,
+  });
+
+  const loader = find(domTree, (node) => node.classList?.includes('loading-overlay'));
+  const content = find(domTree, (node) => node.classList?.includes('content'));
+
+  expect(loader).toBeNull();
+  expect(content).toBeTruthy();
+}, 30000);
+
+test('preserves visible transform-based layout while stabilizing animations', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      body { margin: 0; }
+      .stage { position: relative; width: 600px; height: 100px; }
+      .centered {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 200px;
+        height: 40px;
+        transform: translateX(-50%);
+        transition: transform 200ms ease;
+        background: #111;
+      }
+    </style>
+    <div class="stage">
+      <div class="centered"></div>
+    </div>
+  `, {
+    width: 600,
+    height: 120,
+  });
+
+  const centered = find(domTree, (node) => node.classList?.includes('centered'));
+
+  expect(centered).toBeTruthy();
+  expect(Math.round(centered.rect.x)).toBe(200);
+}, 30000);
+
+test('still reveals safe entry-animation content', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      body { margin: 0; }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .headline {
+        width: 320px;
+        height: 48px;
+        opacity: 0;
+        transform: translateY(24px);
+        animation: fadeUp 10s 60s forwards;
+      }
+    </style>
+    <h1 class="headline">Dashboard</h1>
+  `, {
+    width: 360,
+    height: 120,
+  });
+
+  const headline = find(domTree, (node) => node.classList?.includes('headline'));
+
+  expect(headline).toBeTruthy();
+  expect(headline.computed.opacity).toBe('1');
+  expect(headline.computed.transform).toBe('none');
+}, 30000);
+
 test('preserves structured interactive children instead of collapsing them into text', async () => {
   const { domTree } = await extractFromFile('./tests/vela/input.html', {
     width: 1440,
