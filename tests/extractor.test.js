@@ -139,6 +139,47 @@ test('preserves structured interactive children instead of collapsing them into 
   expect(btnGhost.computed.display).toBe('flex');
 }, 30000);
 
+test('clips paginated table rows after the pager so the table height stays bounded', async () => {
+  const { domTree } = await extractFromHtml(`
+    <style>
+      body { margin: 0; font-family: Arial, sans-serif; }
+      .table-wrap { width: 640px; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 12px 16px; border-bottom: 1px solid #333; }
+      .pagination { padding: 12px 16px; color: #999; }
+    </style>
+    <div class="table-wrap">
+      <table class="report-table">
+        <tbody>
+          <tr><td>Row 1</td></tr>
+          <tr><td>Row 2</td></tr>
+          <tr><td>Row 3</td></tr>
+          <tr><td>Row 4</td></tr>
+          <tr><td>Row 5</td></tr>
+        </tbody>
+      </table>
+      <div class="pagination">Hal 1/314 - Baris 1-50</div>
+      <table class="report-table">
+        <tbody>
+          <tr class="late-row"><td>Row 6</td></tr>
+          <tr class="late-row"><td>Row 7</td></tr>
+          <tr class="late-row"><td>Row 8</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `, {
+    width: 720,
+    height: 360,
+  });
+
+  const wrap = find(domTree, (node) => node.classList?.includes('table-wrap'));
+  const lateRow = find(domTree, (node) => node.classList?.includes('late-row'));
+
+  expect(wrap).toBeTruthy();
+  expect(wrap.rect.height).toBeLessThan(340);
+  expect(lateRow).toBeNull();
+}, 30000);
+
 test('captures form control placeholders and placeholder styles', async () => {
   const { domTree } = await extractFromHtml(`
     <style>

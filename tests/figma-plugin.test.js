@@ -303,6 +303,69 @@ test('preserves centered multiline text box width outside auto layout', async ()
   expect(title.height).toBe(67);
 });
 
+test('keeps explicitly truncated text fixed and enables ending ellipsis', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      textSpec('p.truncate', {
+        width: 274,
+        height: 20,
+        characters: 'Belanja Iuran Jaminan Kesehatan bagi Peserta PBPU dan BP Kelas 3',
+        textTruncation: 'ENDING',
+      }),
+    ],
+  });
+
+  const label = page.children[0];
+  expect(label.textTruncation).toBe('ENDING');
+  expect(label.maxLines).toBe(1);
+  expect(label.textAutoResize).toBe('NONE');
+  expect(label.width).toBe(274);
+  expect(label.height).toBe(20);
+});
+
+test('uses auto width for table-cell nowrap text', async () => {
+  const { figma, page } = createFigmaMock();
+  const context = {
+    figma,
+    __html__: '',
+    console,
+    fetch,
+    setTimeout,
+    Promise,
+    TextEncoder,
+  };
+  vm.createContext(context);
+  vm.runInContext(readFileSync('./figma-plugin/code.js', 'utf8'), context);
+
+  await context.buildFromSnapshot({
+    figmaTree: [
+      textSpec('td.nama-paket span', {
+        width: 274,
+        height: 20,
+        characters: 'RUMAH SAKIT UMUM DAERAH BANYUMAS',
+        whiteSpace: 'nowrap',
+      }),
+    ],
+  });
+
+  const label = page.children[0];
+  expect(label.textAutoResize).toBe('WIDTH_AND_HEIGHT');
+  expect(label.textTruncation).toBeUndefined();
+});
+
 test('keeps centered flex text boxes fixed so vertical middle alignment can apply', async () => {
   const { figma, page } = createFigmaMock();
   const context = {

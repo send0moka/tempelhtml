@@ -76,6 +76,7 @@ function baseComputed(overrides = {}) {
     textAlign: 'left',
     textTransform: 'none',
     whiteSpace: 'normal',
+    textOverflow: 'clip',
     textDecoration: 'none',
     webkitTextStrokeWidth: '0px',
     webkitTextStrokeColor: 'rgba(0, 0, 0, 0)',
@@ -913,4 +914,86 @@ test('stretches ratio-based work visuals to the full card height', () => {
   expect(builtBg.height).toBe(404);
   expect(builtInfo.y).toBe(298);
   expect(builtTag.y).toBe(30);
+});
+
+test('maps table-cell text to auto-width single-line text', () => {
+  const label = textContainerNode({
+    tag: 'span',
+    rect: { x: 14, y: 11, width: 720, height: 20 },
+    text: 'Belanja Iuran Jaminan Kesehatan bagi Peserta PBPU dan BP Kelas 3',
+    computed: {
+      display: 'inline',
+      whiteSpace: 'nowrap',
+      textOverflow: 'clip',
+      overflow: 'visible',
+      overflowX: 'visible',
+      fontSize: '20px',
+    },
+  });
+
+  const cell = frameNode({
+    tag: 'td',
+    classList: ['nama-paket'],
+    rect: { x: 0, y: 0, width: 300, height: 42 },
+    computed: {
+      display: 'table-cell',
+      overflow: 'hidden',
+      overflowX: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      paddingLeft: '14px',
+      paddingRight: '12px',
+    },
+    children: [label],
+  });
+
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 300, height: 42 },
+    children: [cell],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtLabel = tree.children[0].children[0];
+
+  expect(builtLabel.type).toBe('TEXT');
+  expect(builtLabel.x).toBe(14);
+  expect(builtLabel.width).toBe(720);
+  expect(builtLabel.textTruncation).toBeUndefined();
+  expect(builtLabel.whiteSpace).toBe('nowrap');
+});
+
+test('uses parent surface fill for transparent pagination controls', () => {
+  const pagination = frameNode({
+    tag: 'div',
+    classList: ['pagination'],
+    rect: { x: 0, y: 320, width: 640, height: 56 },
+    computed: {
+      display: 'flex',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+    },
+  });
+
+  const section = frameNode({
+    tag: 'div',
+    classList: ['table-section'],
+    rect: { x: 0, y: 0, width: 640, height: 376 },
+    computed: {
+      backgroundColor: 'rgb(9, 13, 20)',
+    },
+    children: [pagination],
+  });
+
+  const body = frameNode({
+    tag: 'body',
+    rect: { x: 0, y: 0, width: 640, height: 376 },
+    children: [section],
+  });
+
+  const [tree] = buildFigmaTree({ annotated: body });
+  const builtSection = tree.children[0];
+  const builtPagination = builtSection.children[0];
+
+  expect(builtSection.fills).toHaveLength(1);
+  expect(builtPagination.fills).toEqual(builtSection.fills);
 });

@@ -1790,6 +1790,14 @@ function applyBaseTextProps(text, spec) {
     text.strokes = spec.strokes;
     text.strokeWeight = spec.strokeWeight || 1;
   }
+  if (spec.textTruncation) {
+    try {
+      text.textTruncation = spec.textTruncation;
+      if (spec.textTruncation === 'ENDING') {
+        text.maxLines = 1;
+      }
+    } catch (err) {}
+  }
 }
 
 function applyTextRunStyles(text, runs) {
@@ -1824,6 +1832,17 @@ function applyTextRunStyles(text, runs) {
 function applyTextSizing(text, spec, parentLayoutMode) {
   if (!spec.width) return;
   try {
+    if (spec.textTruncation === 'ENDING') {
+      text.textAutoResize = 'NONE';
+      text.resize(Math.max(spec.width, 1), Math.max(spec.height || 1, 1));
+      return;
+    }
+
+    if (spec.whiteSpace === 'nowrap') {
+      text.textAutoResize = 'WIDTH_AND_HEIGHT';
+      return;
+    }
+
     if (hasExplicitLineBreaks(spec.characters)) {
       if (shouldPreserveTextWidthForAlignment(spec, parentLayoutMode)) {
         text.textAutoResize = 'HEIGHT';

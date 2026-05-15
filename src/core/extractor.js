@@ -76,6 +76,8 @@ async function stabilizePage(page) {
       }
     });
 
+    limitPaginatedTableRows();
+
     function shouldForceAnimatedElementVisible(el, cs) {
       if (cs.display === 'none' || cs.visibility === 'hidden') {
         return false;
@@ -135,6 +137,111 @@ async function stabilizePage(page) {
       }
 
       return /^translate(?:3d|x|y)?\(/i.test(text);
+    }
+
+    function limitPaginatedTableRows() {
+      const pagers = Array.from(document.querySelectorAll('*')).filter((el) => isPaginationElement(el));
+
+      for (const pager of pagers) {
+        const pagerRect = pager.getBoundingClientRect();
+        if (pagerRect.width <= 0 || pagerRect.height <= 0) {
+          continue;
+        }
+
+        const container = findPaginatedDataContainer(pager, pagerRect);
+        if (!container) {
+          continue;
+        }
+
+        const rows = getDataRows(container).filter((row) => !pager.contains(row));
+        if (rows.length < 8) {
+          continue;
+        }
+
+        const cutoffY = pagerRect.bottom - 1;
+        let hiddenCount = 0;
+        for (const row of rows) {
+          const rect = row.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) {
+            continue;
+          }
+          if (rect.top >= cutoffY) {
+            row.setAttribute('data-tempelhtml-paginated-row-clipped', '1');
+            row.style.display = 'none';
+            hiddenCount++;
+          }
+        }
+
+        if (hiddenCount > 0) {
+          container.setAttribute('data-tempelhtml-paginated-preview', '1');
+        }
+      }
+    }
+
+    function isPaginationElement(el) {
+      if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+
+      const identity = `${el.id || ''} ${String(el.className || '')} ${el.getAttribute('role') || ''}`.toLowerCase();
+      if (/(pagination|paginator|pager|page-nav|page-control)/.test(identity)) {
+        return true;
+      }
+
+      const text = normalizePaginationText(el.innerText || el.textContent || '');
+      if (!text || text.length > 160) {
+        return false;
+      }
+
+      return /\b(hal|page)\s*\d+\s*\/\s*\d+\b/i.test(text)
+        || /\b(baris|rows?)\s+\d+\s*[–-]\s*\d+\b/i.test(text);
+    }
+
+    function findPaginatedDataContainer(pager, pagerRect) {
+      let current = pager.parentElement;
+      while (current && current !== document.documentElement) {
+        const rows = getDataRows(current).filter((row) => !pager.contains(row));
+        if (rows.length >= 8) {
+          const before = rows.filter((row) => {
+            const rect = row.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && rect.bottom <= pagerRect.top + 1;
+          });
+          const after = rows.filter((row) => {
+            const rect = row.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && rect.top >= pagerRect.bottom - 1;
+          });
+
+          if (before.length >= 3 && after.length >= 1) {
+            return current;
+          }
+        }
+
+        current = current.parentElement;
+      }
+
+      return null;
+    }
+
+    function getDataRows(container) {
+      const seen = new Set();
+      const rows = [];
+      const selectors = ['tr', '[role="row"]'];
+
+      for (const selector of selectors) {
+        for (const row of container.querySelectorAll(selector)) {
+          if (seen.has(row) || row.closest('thead')) {
+            continue;
+          }
+          seen.add(row);
+          rows.push(row);
+        }
+      }
+
+      return rows;
+    }
+
+    function normalizePaginationText(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
     }
   });
 
@@ -270,7 +377,7 @@ function escapeHtmlAttribute(value) {
  */
 function walkDOMInBrowser() {
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'HEAD', 'NOSCRIPT']);
-  const TEXT_TAGS = new Set(['p', 'span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+  const TEXT_TAGS = new Set(['p', 'span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th']);
   const INLINE_TAGS = new Set(['span', 'a', 'label', 'em', 'strong', 'b', 'i', 'small', 'mark', 'sup', 'sub', 'u', 's', 'code', 'br', 'wbr']);
   const TEXT_INPUT_TYPES = new Set([
     '',
@@ -489,6 +596,7 @@ function walkDOMInBrowser() {
       textAlign: cs.textAlign,
       textTransform: cs.textTransform,
       whiteSpace: cs.whiteSpace,
+      textOverflow: cs.textOverflow,
       textDecoration: cs.textDecoration,
       webkitTextStrokeWidth: cs.webkitTextStrokeWidth,
       webkitTextStrokeColor: cs.webkitTextStrokeColor,
@@ -705,17 +813,29 @@ function walkDOMInBrowser() {
 
   function getChildNode(child, parentEl, parentStyles, depth) {
     if (child.nodeType === Node.TEXT_NODE) {
-      return getDirectTextNode(child, parentStyles);
+      return getDirectTextNode(child, parentEl, parentStyles);
     }
 
     if (child.nodeType === Node.ELEMENT_NODE) {
-      return getNode(child, depth);
+      const node = getNode(child, depth);
+      if (!node) {
+        return null;
+      }
+
+      if (parentEl && parentStyles && clippingEnabled(parentStyles)) {
+        const parentRect = parentEl.getBoundingClientRect();
+        if (isClippedOutsideParent(node.rect, parentRect, parentStyles)) {
+          return null;
+        }
+      }
+
+      return node;
     }
 
     return null;
   }
 
-  function getDirectTextNode(textNode, parentStyles) {
+  function getDirectTextNode(textNode, parentEl, parentStyles) {
     const normalizedText = normalizeTextFragment(textNode.textContent || '').trim();
     if (!normalizedText) {
       return null;
@@ -726,6 +846,13 @@ function walkDOMInBrowser() {
     const rect = range.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) {
       return null;
+    }
+
+    if (parentEl && parentStyles && clippingEnabled(parentStyles)) {
+      const parentRect = parentEl.getBoundingClientRect();
+      if (isClippedOutsideParent(rect, parentRect, parentStyles)) {
+        return null;
+      }
     }
 
     const computed = extractRelevantStyles(parentStyles);

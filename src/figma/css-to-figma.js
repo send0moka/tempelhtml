@@ -26,6 +26,46 @@ function isTransparentCssColor(value) {
   return cssColorToFigma(value).a === 0;
 }
 
+function meaningfulTextOverflow(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized && normalized !== 'clip' && normalized !== 'none' ? normalized : '';
+}
+
+function overflowClipsInlineContent(computed) {
+  if (!computed) {
+    return false;
+  }
+
+  return ['overflow', 'overflowX'].some((prop) => {
+    const value = String(computed[prop] || '').trim().toLowerCase();
+    return value.split(/\s+/).some((part) => part === 'hidden' || part === 'clip' || part === 'scroll' || part === 'auto');
+  });
+}
+
+function isSingleLineWhiteSpace(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized.includes('nowrap') || normalized === 'pre';
+}
+
+/**
+ * CSS ellipsis requires text-overflow, non-wrapping inline text,
+ * and clipping on either the text box or the parent cell/container.
+ */
+export function shouldTruncateText(computed = {}, parentComputed = null) {
+  const textOverflow = meaningfulTextOverflow(computed?.textOverflow)
+    || meaningfulTextOverflow(parentComputed?.textOverflow);
+
+  if (!textOverflow.includes('ellipsis')) {
+    return false;
+  }
+
+  if (!isSingleLineWhiteSpace(computed?.whiteSpace) && !isSingleLineWhiteSpace(parentComputed?.whiteSpace)) {
+    return false;
+  }
+
+  return overflowClipsInlineContent(computed) || overflowClipsInlineContent(parentComputed);
+}
+
 // ─── LAYOUT ──────────────────────────────────────────────────────────────────
 
 /**
@@ -386,7 +426,7 @@ export function mapBoxShadow(computed) {
 /**
  * CSS text properties → Figma text node properties
  */
-export function mapTypography(computed, fontMap) {
+export function mapTypography(computed, fontMap = {}, parentComputed = null) {
   const familyRaw = computed.fontFamily?.split(',')[0].replace(/['"]/g, '').trim() ?? 'Inter';
   const weight = computed.fontWeight ?? '400';
   const isItalic = computed.fontStyle === 'italic';
@@ -395,7 +435,7 @@ export function mapTypography(computed, fontMap) {
   const font = fontMap?.[fontKey] ?? { family: familyRaw, style: 'Regular' };
   const fontSize = parsePx(computed.fontSize) || 16;
 
-  return {
+  const result = {
     fontName: font,
     fontSize,
     lineHeight: lineHeightToFigma(computed.lineHeight, computed.fontSize),
@@ -410,6 +450,12 @@ export function mapTypography(computed, fontMap) {
       ? []
       : [solidPaint(computed.color)],
   };
+
+  if (shouldTruncateText(computed, parentComputed)) {
+    result.textTruncation = 'ENDING';
+  }
+
+  return result;
 }
 
 /**
